@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Faculty Facial Recognition</string>
+    <string name="default_status">Awaiting Recognition</string>
 </resources>

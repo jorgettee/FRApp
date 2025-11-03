@@ -53,6 +53,8 @@ public class FaceNet {
             return null;
         }
 
+        // Scaling (from InputImageUtils.getBitmapFromInputImage or alignAndCropFace)
+        // must result in a face that can be scaled to 160x160 here
         Bitmap scaled = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true);
 
         float[][][][] input = new float[1][INPUT_SIZE][INPUT_SIZE][3];
@@ -62,6 +64,8 @@ public class FaceNet {
                 float r = ((pixel >> 16) & 0xFF) / 255.0f;
                 float g = ((pixel >> 8) & 0xFF) / 255.0f;
                 float b = (pixel & 0xFF) / 255.0f;
+                // **Pre-processing (Normalization to [-1, 1]):**
+                // This must exactly match the model's training!
                 input[0][y][x][0] = (r - 0.5f) * 2.0f;
                 input[0][y][x][1] = (g - 0.5f) * 2.0f;
                 input[0][y][x][2] = (b - 0.5f) * 2.0f;
@@ -77,6 +81,7 @@ public class FaceNet {
         }
 
         float[] emb = embedding[0];
+        // **L2 Normalization (often required for FaceNet embeddings):**
         l2Normalize(emb);
 
         return emb;
@@ -94,6 +99,7 @@ public class FaceNet {
         if (emb1 == null || emb2 == null || emb1.length != emb2.length)
             return Float.MAX_VALUE;
 
+        // **Euclidean Distance:**
         float sum = 0f;
         for (int i = 0; i < emb1.length; i++) {
             float diff = emb1[i] - emb2[i];
