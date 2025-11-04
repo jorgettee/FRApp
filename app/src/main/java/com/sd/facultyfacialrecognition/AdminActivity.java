@@ -48,7 +48,7 @@ public class AdminActivity extends AppCompatActivity {
     private int photoCount = 0;
     private String currentFacultyName;
     private File currentFacultyDir;
-    private static final int NUM_PHOTOS_TO_CAPTURE = 10;
+    private static final int NUM_PHOTOS_TO_CAPTURE = 100;
 
     private ImageCapture imageCapture;
     private ExecutorService cameraExecutor;
