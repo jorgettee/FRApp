@@ -45,7 +45,7 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(new Intent(HomeActivity.this, MainActivity.class)));
 
         buttonAdminPanel.setOnClickListener(v ->
-                startActivity(new Intent(HomeActivity.this, AdminActivity.class)));
+                startActivity(new Intent(HomeActivity.this, PinLockActivity.class)));
     }
 
     @Override

@@ -25,7 +25,6 @@ public class LoginActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
     private GoogleSignInClient mGoogleSignInClient;
-
     private Button buttonGoogleSignIn;
 
     @Override
@@ -34,8 +33,6 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         buttonGoogleSignIn = findViewById(R.id.buttonGoogleSignIn);
-
-        // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
 
         // Configure Google Sign-In
@@ -43,7 +40,6 @@ public class LoginActivity extends AppCompatActivity {
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
-
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
         buttonGoogleSignIn.setOnClickListener(v -> signIn());
@@ -64,15 +60,12 @@ public class LoginActivity extends AppCompatActivity {
                         .getResult(ApiException.class);
 
                 if (account != null) {
-                    // First, filter by email domain
                     String email = account.getEmail();
                     if (email != null && email.endsWith("@g.batstate-u.edu.ph")) {
-                        // Valid email, continue with Firebase auth
                         firebaseAuthWithGoogle(account);
                     } else {
-                        // Invalid email, sign out immediately
-                        mGoogleSignInClient.signOut();
-                        mAuth.signOut();
+                        // Invalid email — force logout
+                        signOutImmediately();
                         Toast.makeText(this, "Access denied. Use a @g.batstate-u.edu.ph email.", Toast.LENGTH_LONG).show();
                     }
                 }
@@ -93,15 +86,27 @@ public class LoginActivity extends AppCompatActivity {
         AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
             if (task.isSuccessful()) {
-                // Auth succeeded, go to AdminActivity
-                Toast.makeText(this, "Signed in as " + acct.getEmail(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Signed in as " + acct.getEmail(), Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(LoginActivity.this, AdminActivity.class);
                 startActivity(intent);
-                finish(); // Close LoginActivity
+                finish(); // Prevent going back
             } else {
                 Log.e(TAG, "Firebase authentication failed", task.getException());
-                Toast.makeText(this, "Authentication failed: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Authentication failed.", Toast.LENGTH_LONG).show();
             }
         });
     }
+
+    // 🔒 Always logout when leaving this screen
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        signOutImmediately();
+    }
+
+    private void signOutImmediately() {
+        mAuth.signOut();
+        mGoogleSignInClient.signOut();
+    }
+
 }

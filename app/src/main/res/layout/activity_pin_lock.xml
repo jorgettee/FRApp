@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="#FFFFFF">
+
+    <TextView
+        android:id="@+id/textViewTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter Admin PIN"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"
+        android:textColor="#000000"/>
+
+    <EditText
+        android:id="@+id/editTextPin"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:hint="Enter PIN"
+        android:inputType="numberPassword"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:maxLength="6"
+        android:importantForAutofill="no"
+        android:layout_marginBottom="24dp"/>
+
+    <Button
+        android:id="@+id/buttonSubmit"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="Submit"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/buttonReset"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:text="Reset PIN"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>

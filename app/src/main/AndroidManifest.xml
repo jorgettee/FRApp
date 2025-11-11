@@ -35,6 +35,7 @@
             android:name=".AdminActivity"
             android:exported="false" />
         <activity android:name=".DashboardActivity" />
+        <activity android:name=".PinLockActivity" />
         <activity android:name=".LoginActivity" />
         <activity android:name=".ActionActivity" />
         <activity android:name=".ThankYouActivity" />

@@ -26,6 +26,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.face.Face;
 import com.google.mlkit.vision.face.FaceDetection;
@@ -41,9 +42,11 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -51,6 +54,13 @@ import java.util.concurrent.Executors;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 
 
 public class MainActivity extends AppCompatActivity {
@@ -86,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean isAwaitingLockConfirmation = false;
     private boolean isAwaitingUnlockConfirmation = false;
     private boolean isAwaitingLockerRecognition = false;
+    private boolean isReturningFromBreak = false;
+
     private String authorizedLocker = null;
     private String authorizedUnlocker = null;
     private long lastLockTimestamp = 0;
@@ -95,6 +107,9 @@ public class MainActivity extends AppCompatActivity {
     private Handler countdownDisplayHandler;
     private Runnable countdownDisplayRunnable;
     private int confirmationTimeRemaining = VISUAL_COUNTDOWN_SECONDS;
+    private FirebaseFirestore db;
+
+    private String currentLab = "CompLab3"; //CpeLab or CompLab3
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,6 +137,9 @@ public class MainActivity extends AppCompatActivity {
 
         initializeSystem();
         startCamera();
+
+        db = FirebaseFirestore.getInstance();
+
     }
 
     private void initializeSystem() {
@@ -215,11 +233,105 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private String getCurrentTimestamp() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        return sdf.format(new Date());
+    }
+
+    private void updateRealtimeStatus(String facultyStatus, String doorStatus) {
+        if (authorizedUnlocker == null ||
+                authorizedUnlocker.equals("Scanning...") ||
+                authorizedUnlocker.equals("Unknown")) {
+            Log.w("DoorDebug", "Skipping Realtime DB update: unauthorized or unknown faculty.");
+            return;
+        }
+
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                .format(new Date());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("facultyStatus", facultyStatus);
+        data.put("doorStatus", doorStatus);
+        data.put("timestamp", timestamp);
+
+        try {
+            FirebaseDatabase database = FirebaseDatabase.getInstance(
+                    "https://facultyfacialrecognition-default-rtdb.asia-southeast1.firebasedatabase.app/"
+            );
+
+            DatabaseReference dbRef = database
+                    .getReference(currentLab)
+                    .child(authorizedUnlocker);
+
+            dbRef.setValue(data)
+                    .addOnSuccessListener(aVoid ->
+                            Log.d("DoorDebug", "Realtime DB successfully updated"))
+                    .addOnFailureListener(e ->
+                            Log.e("DoorDebug", "Realtime DB update FAILED", e));
+
+        } catch (Exception e) {
+            Log.e("DoorDebug", "Database initialization error", e);
+        }
+    }
+
+
+    private void logDoorEvent(String facultyName, String facultyStatus, String doorStatus) {
+        if (facultyName == null || facultyName.equals("Scanning...") || facultyName.equals("Unknown")) {
+            Log.w("DoorLockDebug", "Skipping logging: invalid faculty name");
+            return;
+        }
+
+        String timestamp = getCurrentTimestamp();
+
+        Map<String, Object> logEntry = new HashMap<>();
+        logEntry.put("facultyName", facultyName);
+        logEntry.put("facultyStatus", facultyStatus);
+        logEntry.put("doorStatus", doorStatus);
+        logEntry.put("timestamp", timestamp);
+        logEntry.put("lab", currentLab);
+
+        db.collection("DoorLogs")
+                .add(logEntry)
+                .addOnSuccessListener(docRef -> Log.d("DoorLockDebug",
+                        "Door event logged: " + facultyName + " | " + facultyStatus + " | " + doorStatus + " | " + timestamp))
+                .addOnFailureListener(e -> Log.e("DoorLockDebug", "Error logging door event", e));
+
+        updateLabStatus(facultyName, facultyStatus, doorStatus, timestamp);
+    }
+
+    private void updateLabStatus(String facultyName, String facultyStatus, String doorStatus, String timestamp) {
+        if (facultyName == null || facultyName.equals("Scanning...") || facultyName.equals("Unknown")) return;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("facultyStatus", facultyStatus);
+        data.put("doorStatus", doorStatus);
+        data.put("timestamp", timestamp);
+
+        db.collection(currentLab)
+                .document(facultyName)
+                .set(data)
+                .addOnSuccessListener(aVoid -> Log.d("DoorLockDebug",
+                        "Updated " + currentLab + " for " + facultyName + " | " + facultyStatus + " | " + doorStatus + " | " + timestamp))
+                .addOnFailureListener(e -> Log.e("DoorLockDebug",
+                        "Error updating " + currentLab + " for " + facultyName, e));
+    }
+
     private void handleLockConfirmation() {
         isDoorLocked = true;
         isAwaitingLockConfirmation = false;
         isAwaitingLockerRecognition = false;
         lastLockTimestamp = System.currentTimeMillis();
+
+        final String facultyNameFinal = authorizedLocker; // make final for lambda
+        final String status = "LOCKED";
+
+        Log.d("DoorLockDebug", "Handling LOCK confirmation for faculty: " + facultyNameFinal);
+
+        // Log door event
+        logDoorEvent(authorizedLocker, "End Class", "LOCKED");
+
+        // Update Firestore with debug
+        updateFacultyStatusWithDebug(facultyNameFinal, status);
 
         resetStateAfterAction();
         updateUiOnThread("System Locked", "Door secured. Cooldown active.");
@@ -228,7 +340,23 @@ public class MainActivity extends AppCompatActivity {
     private void handleUnlockConfirmation() {
         isDoorLocked = false;
         isAwaitingUnlockConfirmation = false;
-        authorizedUnlocker = stableMatchName;
+        final String facultyNameFinal = stableMatchName;
+        authorizedUnlocker = facultyNameFinal;
+
+        String facultyStatus = "In Class";
+        String doorStatus = "UNLOCKED";
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+
+        Log.d("DoorLockDebug", "Handling UNLOCK confirmation for faculty: " + facultyNameFinal);
+
+        // Firestore logs
+        logDoorEvent(facultyNameFinal, facultyStatus, doorStatus);
+
+        // Firestore lab status update
+        updateLabStatus(facultyNameFinal, facultyStatus, doorStatus, timestamp);
+
+        // Realtime Database update
+        updateRealtimeStatus(facultyStatus, doorStatus);
 
         if (cameraExecutor != null) {
             cameraExecutor.shutdown();
@@ -252,27 +380,66 @@ public class MainActivity extends AppCompatActivity {
                 updateUiOnThread("What would you like to do?", "Select an option below.");
             });
 
-            resetStateAfterAction(); // Ensure state reset even in rescan mode
+            resetStateAfterAction();
             return;
         }
 
         Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
-        intent.putExtra("profName", authorizedUnlocker);
+        intent.putExtra("profName", facultyNameFinal);
         startActivity(intent);
 
         resetStateAfterAction();
-        updateUiOnThread("Access Granted:\n" + authorizedUnlocker,
+        updateUiOnThread("Access Granted:\n" + facultyNameFinal,
                 "Door UNLOCKED. Choose options below.");
     }
 
+
+    // New method with detailed debug logging
+    private void updateFacultyStatusWithDebug(String facultyName, String status) {
+        if (facultyName == null || facultyName.equals("Scanning...") || facultyName.equals("Unknown")) {
+            Log.e("DoorLockDebug", "Skipping Firestore update: invalid faculty name '" + facultyName + "'");
+            return;
+        }
+
+        final String facultyNameFinal = facultyName;
+        final String statusFinal = status;
+
+        Log.d("DoorLockDebug", "Updating Firestore for faculty: " + facultyNameFinal + " with status: " + statusFinal);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("status", statusFinal); // will be "LOCKED", "UNLOCKED", or "BREAK"
+        data.put("timestamp", System.currentTimeMillis());
+
+        db.collection(currentLab)
+                .document(facultyNameFinal)
+                .set(data)
+                .addOnSuccessListener(aVoid -> Log.d("DoorLockDebug", "Successfully updated faculty status for " + facultyNameFinal))
+                .addOnFailureListener(e -> Log.e("DoorLockDebug", "Error updating faculty status for " + facultyNameFinal, e));
+    }
+
     public void onTakeBreakClicked(View view) {
-        // Go to dashboard with break status
+        if (authorizedUnlocker == null) return;
+
+        String facultyNameFinal = authorizedUnlocker;
+        String facultyStatus = "Break";
+        String doorStatus = "UNLOCKED";
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+
+        Log.d("DoorLockDebug", "Professor taking break: " + facultyNameFinal);
+
+        logDoorEvent(facultyNameFinal, facultyStatus, doorStatus);
+        updateLabStatus(facultyNameFinal, facultyStatus, doorStatus, timestamp);
+        updateRealtimeStatus(facultyStatus, doorStatus);
+
+        // Navigate to dashboard
         Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
-        intent.putExtra("profName", authorizedUnlocker);
+        intent.putExtra("profName", facultyNameFinal);
         intent.putExtra("status", "Professor is on break. Please scan to resume class.");
         startActivity(intent);
         finish();
     }
+
+
 
     public void onBackInClassScanned() {
         stableMatchCount = 0;
@@ -283,18 +450,49 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onEndClassClicked(View view) {
+        if (authorizedUnlocker == null) return;
+
+        String facultyNameFinal = authorizedUnlocker;
+        String facultyStatus = "End Class";
+        String doorStatus = "LOCKED";
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+
+        Log.d("DoorLockDebug", "Class ended by: " + facultyNameFinal);
+
+        // Firestore logging
+        logDoorEvent(facultyNameFinal, facultyStatus, doorStatus);
+        updateLabStatus(facultyNameFinal, facultyStatus, doorStatus, timestamp);
+
+        // Realtime Database update
+        updateRealtimeStatus(facultyStatus, doorStatus);
+
+        isDoorLocked = true;
+
         Intent intent = new Intent(MainActivity.this, ThankYouActivity.class);
         intent.putExtra("message", "Class ended and door is locked, thank you!");
         startActivity(intent);
         finish();
     }
 
+
+
     public void onBreakDoneClicked(View view) {
+        if (authorizedUnlocker == null) return;
+
+        isReturningFromBreak = true;
+
+        String facultyStatus = "In Class";
+        String doorStatus = "UNLOCKED";
+
+        // Realtime Database update
+        updateRealtimeStatus(facultyStatus, doorStatus);
+
         Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
         intent.putExtra("profName", authorizedUnlocker);
         startActivity(intent);
         finish();
     }
+
 
 
     public void onConfirmNoClicked(View view) {
