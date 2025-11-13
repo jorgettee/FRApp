@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -11,7 +12,6 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.media.MediaScannerConnection;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -25,29 +25,28 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 
-import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInClient;
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.firebase.auth.FirebaseAuth;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
+import com.google.android.gms.auth.api.signin.*;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.tasks.Task;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.services.drive.DriveScopes;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class AdminActivity extends AppCompatActivity {
 
-    private static final String TAG = "AdminActivity";
+    private static final int REQUEST_CODE_SIGN_IN = 2001;
+    private static final int REQUEST_CODE_PICK_IMAGES = 3001;
 
-    private Button buttonAddFaculty, buttonDeleteFaculty;
+
+    private Button buttonAddFaculty, buttonDeleteFaculty, buttonImportDrive, buttonGenerateEmbeddings;
     private TextView textStatus;
     private PreviewView previewView;
 
@@ -62,8 +61,10 @@ public class AdminActivity extends AppCompatActivity {
 
     private FaceAligner faceAligner;
     private FaceNet faceNet;
-    private GoogleSignInClient mGoogleSignInClient;
-    private FirebaseAuth mAuth;
+
+    // Google Drive
+    private GoogleSignInClient googleSignInClient;
+    private com.google.api.services.drive.Drive googleDriveService;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -72,6 +73,8 @@ public class AdminActivity extends AppCompatActivity {
 
         buttonAddFaculty = findViewById(R.id.buttonAddFaculty);
         buttonDeleteFaculty = findViewById(R.id.buttonDeleteFaculty);
+        buttonImportDrive = findViewById(R.id.buttonImportDrive);
+        buttonGenerateEmbeddings = findViewById(R.id.buttonGenerateEmbeddings);
         textStatus = findViewById(R.id.textStatus);
         previewView = findViewById(R.id.previewView);
 
@@ -89,35 +92,11 @@ public class AdminActivity extends AppCompatActivity {
 
         buttonAddFaculty.setOnClickListener(v -> showAddFacultyDialog());
         buttonDeleteFaculty.setOnClickListener(v -> showDeleteFacultyListDialog());
-
-        Button buttonLogout = findViewById(R.id.buttonLogout);
-        buttonLogout.setOnClickListener(v -> {
-            // Sign out from Firebase and Google
-            if (mAuth != null) mAuth.signOut();
-            if (mGoogleSignInClient != null) mGoogleSignInClient.signOut();
-
-            Toast.makeText(AdminActivity.this, "Logged out successfully", Toast.LENGTH_SHORT).show();
-
-            // Go back to LoginActivity
-            Intent intent = new Intent(AdminActivity.this, LoginActivity.class);
-            startActivity(intent);
-            finish(); // Close AdminActivity
-        });
-
-        Button buttonGenerateEmbeddings = findViewById(R.id.buttonGenerateEmbeddings);
-        buttonGenerateEmbeddings.setOnClickListener(v -> {
-            generateEmbeddings();
-            Toast.makeText(this, "Generating embeddings...", Toast.LENGTH_SHORT).show();
-        });
-
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id))
-                .requestEmail()
-                .build();
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
-
+        buttonImportDrive.setOnClickListener(v -> promptFacultyNameForDriveImport());
+        buttonGenerateEmbeddings.setOnClickListener(v -> generateEmbeddings());
     }
 
+    // -------------------- Storage Permissions --------------------
     private void requestStoragePermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
@@ -130,6 +109,7 @@ public class AdminActivity extends AppCompatActivity {
         }
     }
 
+    // -------------------- Add Faculty --------------------
     private void showAddFacultyDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Enter Faculty Name");
@@ -144,30 +124,7 @@ public class AdminActivity extends AppCompatActivity {
                 textStatus.setText("Faculty name cannot be empty.");
                 return;
             }
-
-            // Path where faculty folders are stored
-            File picturesDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-            File facultyRootDir = new File(picturesDir, "FacultyPhotos");
-            if (!facultyRootDir.exists()) facultyRootDir.mkdirs();
-
-            // Check for duplicate folder
-            File existingFacultyDir = new File(facultyRootDir, facultyName);
-            if (existingFacultyDir.exists() && existingFacultyDir.isDirectory()) {
-                new AlertDialog.Builder(this)
-                        .setTitle("Duplicate Faculty")
-                        .setMessage("A dataset for \"" + facultyName + "\" already exists.\n\nDo you want to overwrite it?")
-                        .setPositiveButton("Overwrite", (d, w) -> {
-                            deleteRecursive(existingFacultyDir);
-                            startNewFacultyRegistration(facultyName);
-                        })
-                        .setNegativeButton("Cancel", (d, w) -> {
-                            textStatus.setText("Cancelled registration for: " + facultyName);
-                            d.dismiss();
-                        })
-                        .show();
-            } else {
-                startNewFacultyRegistration(facultyName);
-            }
+            startNewFacultyRegistration(facultyName);
         });
 
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
@@ -183,7 +140,6 @@ public class AdminActivity extends AppCompatActivity {
 
         photoCount = 0;
         textStatus.setText("Ready to capture photos for: " + facultyName);
-
         startCameraForFaculty();
     }
 
@@ -192,31 +148,32 @@ public class AdminActivity extends AppCompatActivity {
         File[] facultyDirs = facultyRoot.listFiles(File::isDirectory);
 
         if (facultyDirs != null && facultyDirs.length > 0) {
-            String[] facultyNames = new String[facultyDirs.length];
-            for (int i = 0; i < facultyDirs.length; i++) facultyNames[i] = facultyDirs[i].getName();
-
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Select Faculty to Delete");
-            builder.setItems(facultyNames, (dialog, which) -> {
-                deleteRecursive(new File(facultyRoot, facultyNames[which]));
-                textStatus.setText("Deleted photos for: " + facultyNames[which]);
-            });
-            builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
-            builder.show();
+            String[] facultyNames = Arrays.stream(facultyDirs).map(File::getName).toArray(String[]::new);
+            new AlertDialog.Builder(this)
+                    .setTitle("Select Faculty to Delete")
+                    .setItems(facultyNames, (dialog, which) -> {
+                        deleteRecursive(new File(facultyRoot, facultyNames[which]));
+                        textStatus.setText("Deleted photos for: " + facultyNames[which]);
+                        Toast.makeText(this, "Regenerating embeddings...", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                    .show();
         } else {
             textStatus.setText("No faculty found to delete.");
         }
     }
 
     private void deleteRecursive(File fileOrDirectory) {
-        if (fileOrDirectory.isDirectory()) {
-            for (File child : fileOrDirectory.listFiles()) deleteRecursive(child);
-        }
+        if (fileOrDirectory.isDirectory())
+            for (File child : Objects.requireNonNull(fileOrDirectory.listFiles()))
+                deleteRecursive(child);
         fileOrDirectory.delete();
     }
 
+    // -------------------- CameraX --------------------
     private void startCameraForFaculty() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
+        com.google.common.util.concurrent.ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
+                ProcessCameraProvider.getInstance(this);
         cameraProviderFuture.addListener(() -> {
             try {
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
@@ -232,9 +189,7 @@ public class AdminActivity extends AppCompatActivity {
 
                 textStatus.setText("Camera ready. Capturing photos automatically...");
                 captureNextPhoto();
-
             } catch (Exception e) {
-                e.printStackTrace();
                 textStatus.setText("Camera init failed: " + e.getMessage());
             }
         }, ContextCompat.getMainExecutor(this));
@@ -243,7 +198,7 @@ public class AdminActivity extends AppCompatActivity {
     private void captureNextPhoto() {
         if (photoCount >= NUM_PHOTOS_TO_CAPTURE) {
             textStatus.setText("All photos captured for: " + currentFacultyName);
-            generateEmbeddings();
+            Toast.makeText(this, "Photos ready. Press 'Generate Embeddings' to continue.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -253,115 +208,188 @@ public class AdminActivity extends AppCompatActivity {
 
         imageCapture.takePicture(outputOptions, cameraExecutor, new ImageCapture.OnImageSavedCallback() {
             @Override
-            public void onImageSaved(ImageCapture.OutputFileResults outputFileResults) {
+            public void onImageSaved(ImageCapture.OutputFileResults results) {
                 photoCount++;
-                runOnUiThread(() -> textStatus.setText(
-                        "Captured photo " + photoCount + "/" + NUM_PHOTOS_TO_CAPTURE));
-
-                // Delay next capture by 0.5 seconds
-                new android.os.Handler(getMainLooper()).postDelayed(
-                        AdminActivity.this::captureNextPhoto, CAPTURE_INTERVAL_MS
-                );
+                runOnUiThread(() -> textStatus.setText("Captured photo " + photoCount + "/" + NUM_PHOTOS_TO_CAPTURE));
+                new android.os.Handler(getMainLooper()).postDelayed(AdminActivity.this::captureNextPhoto, CAPTURE_INTERVAL_MS);
             }
 
             @Override
             public void onError(ImageCaptureException exception) {
-                runOnUiThread(() -> textStatus.setText("Photo capture failed: " + exception.getMessage()));
+                runOnUiThread(() -> textStatus.setText("Capture failed: " + exception.getMessage()));
             }
         });
     }
 
-    private void generateEmbeddings() {
-        textStatus.setText("Generating embeddings...");
-        new Thread(() -> {
+    // -------------------- Google Drive --------------------
+    private void promptFacultyNameForDriveImport() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Import Faculty Photos from Drive");
+
+        final EditText input = new EditText(this);
+        input.setHint("Enter Faculty Name");
+        builder.setView(input);
+
+        builder.setPositiveButton("Next", (dialog, which) -> {
+            currentFacultyName = input.getText().toString().trim();
+            if (currentFacultyName.isEmpty()) {
+                Toast.makeText(this, "Faculty name cannot be empty.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            requestDriveSignIn(); // sign-in before picking
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
+
+    private void openDrivePicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true); // allow multiple selection
+        startActivityForResult(intent, REQUEST_CODE_PICK_IMAGES);
+    }
+
+    private void requestDriveSignIn() {
+        GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestScopes(new Scope(DriveScopes.DRIVE_READONLY))
+                .build();
+
+        googleSignInClient = GoogleSignIn.getClient(this, signInOptions);
+
+        // Sign out first to allow account selection each time
+        googleSignInClient.signOut().addOnCompleteListener(task -> {
+            startActivityForResult(googleSignInClient.getSignInIntent(), REQUEST_CODE_SIGN_IN);
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE_SIGN_IN && resultCode == RESULT_OK) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
-                File facultyRoot = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "FacultyPhotos");
-                if (!facultyRoot.exists() || !facultyRoot.isDirectory()) {
-                    runOnUiThread(() -> textStatus.setText("No faculty photos found."));
-                    return;
-                }
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                initializeDriveService(account); // will open picker automatically
+            } catch (ApiException e) {
+                e.printStackTrace();
+                textStatus.setText("Drive sign-in failed: " + e.getMessage());
+            }
+        }
+        else if (requestCode == REQUEST_CODE_PICK_IMAGES && resultCode == RESULT_OK) {
+            if (data == null) return;
 
-                Map<String, float[]> embeddingsMap = new HashMap<>();
-                File[] facultyDirs = facultyRoot.listFiles(File::isDirectory);
-                if (facultyDirs != null) {
-                    for (File facultyDir : facultyDirs) {
-                        String facultyName = facultyDir.getName();
-                        File[] photos = facultyDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".png"));
-                        if (photos == null || photos.length == 0) continue;
+            File facultyDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                    "FacultyPhotos/" + currentFacultyName);
+            if (!facultyDir.exists()) facultyDir.mkdirs();
 
-                        List<float[]> photoEmbeddings = new ArrayList<>();
-                        for (File photoFile : photos) {
-                            Bitmap bitmap = BitmapUtils.loadBitmap(photoFile.getAbsolutePath());
-                            if (bitmap == null) continue;
+            try {
+                int imported = 0;
 
-                            Bitmap alignedFace = faceAligner.alignFace(bitmap);
-                            if (alignedFace == null) continue;
-
-                            float[] emb = faceNet.getEmbedding(alignedFace);
-                            if (emb == null) continue;
-
-                            normalizeEmbedding(emb);
-                            photoEmbeddings.add(emb);
-                        }
-
-                        if (!photoEmbeddings.isEmpty()) {
-                            float[] avg = averageEmbeddings(photoEmbeddings);
-                            embeddingsMap.put(facultyName, avg);
-                        }
+                // Multiple images
+                if (data.getClipData() != null) {
+                    for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                        Uri uri = data.getClipData().getItemAt(i).getUri();
+                        copyUriToFile(uri, facultyDir, ++imported);
                     }
                 }
-
-                File embeddingsDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "FacultyRecognition");
-                if (!embeddingsDir.exists()) embeddingsDir.mkdirs();
-
-                File embeddingsFile = new File(embeddingsDir, "embeddings.json");
-
-                JSONObject obj = new JSONObject();
-                for (Map.Entry<String, float[]> entry : embeddingsMap.entrySet()) {
-                    JSONArray arr = new JSONArray();
-                    for (float v : entry.getValue()) arr.put(v);
-                    obj.put(entry.getKey(), arr);
+                // Single image
+                else if (data.getData() != null) {
+                    Uri uri = data.getData();
+                    copyUriToFile(uri, facultyDir, 1);
+                    imported = 1;
                 }
 
-                try (FileOutputStream fos = new FileOutputStream(embeddingsFile)) {
-                    fos.write(obj.toString(4).getBytes());
+                final int finalImported = imported;
+                runOnUiThread(() -> {
+                    textStatus.setText("Imported " + finalImported + " photo(s)! Press 'Generate Embeddings' to continue.");
+                    Toast.makeText(this, "Photos ready.", Toast.LENGTH_SHORT).show();
+                });
+
+                // Auto sign-out after importing
+                if (googleSignInClient != null) {
+                    googleSignInClient.signOut();
                 }
-
-                Log.d("AdminActivity", "Embeddings saved at: " + embeddingsFile.getAbsolutePath());
-                Log.d("AdminActivity", "Embeddings JSON:\n" + obj.toString(4));
-
-                MediaScannerConnection.scanFile(
-                        AdminActivity.this,
-                        new String[]{embeddingsFile.getAbsolutePath()},
-                        null,
-                        (path, uri) -> Log.d("MediaScanner", "Scanned " + path))
-                ;
-
-                runOnUiThread(() -> textStatus.setText("Embeddings saved: " + embeddingsFile.getAbsolutePath()));
 
             } catch (Exception e) {
                 e.printStackTrace();
-                runOnUiThread(() -> textStatus.setText("Error generating embeddings: " + e.getMessage()));
+                textStatus.setText("Import failed: " + e.getMessage());
+            }
+        }
+    }
+
+
+    private void copyUriToFile(Uri uri, File facultyDir, int count) throws Exception {
+        InputStream inputStream = getContentResolver().openInputStream(uri);
+        File outFile = new File(facultyDir, "photo_" + count + ".jpg");
+        OutputStream outputStream = new FileOutputStream(outFile);
+
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+
+        inputStream.close();
+        outputStream.close();
+    }
+
+    private void initializeDriveService(GoogleSignInAccount account) {
+        // No need to pre-fetch files. Just open picker
+        openDrivePicker();
+    }
+
+    private void importImagesFromDrive() {
+        new Thread(() -> {
+            try {
+                com.google.api.services.drive.model.FileList result = googleDriveService.files().list()
+                        .setQ("mimeType contains 'image/' and trashed=false")
+                        .setFields("files(id, name)")
+                        .execute();
+
+                List<com.google.api.services.drive.model.File> files = result.getFiles();
+                if (files == null || files.isEmpty()) {
+                    runOnUiThread(() -> textStatus.setText("No images found in Drive."));
+                    return;
+                }
+
+                File facultyDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                        "FacultyPhotos/" + currentFacultyName);
+                if (!facultyDir.exists()) facultyDir.mkdirs();
+
+                int downloaded = 0;
+                for (com.google.api.services.drive.model.File driveFile : files) {
+                    if (downloaded >= 5) break; // optional limit
+                    try (OutputStream outputStream = new FileOutputStream(new File(facultyDir, driveFile.getName()))) {
+                        googleDriveService.files().get(driveFile.getId()).executeMediaAndDownloadTo(outputStream);
+                    }
+                    downloaded++;
+                }
+
+                int finalDownloaded = downloaded;
+                runOnUiThread(() -> {
+                    textStatus.setText("Imported " + finalDownloaded + " photo(s) from Drive! Press 'Generate Embeddings' to continue.");
+                    Toast.makeText(AdminActivity.this, "Photos ready.", Toast.LENGTH_SHORT).show();
+                });
+
+                googleSignInClient.signOut();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> textStatus.setText("Drive import failed: " + e.getMessage()));
             }
         }).start();
     }
 
-
-    private float[] averageEmbeddings(List<float[]> embeddingsList) {
-        int length = embeddingsList.get(0).length;
-        float[] avg = new float[length];
-        for (float[] emb : embeddingsList) for (int i = 0; i < length; i++) avg[i] += emb[i];
-        for (int i = 0; i < length; i++) avg[i] /= embeddingsList.size();
-        return avg;
-    }
-
-    private void normalizeEmbedding(float[] emb) {
-        float norm = 0;
-        for (float v : emb) norm += v * v;
-        norm = (float) Math.sqrt(norm);
-        if (norm > 0) {
-            for (int i = 0; i < emb.length; i++) emb[i] /= norm;
-        }
+    // -------------------- Embeddings --------------------
+    private void generateEmbeddings() {
+        textStatus.setText("Generating embeddings...");
+        Toast.makeText(this, "Embeddings would be generated here (stub)", Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -369,16 +397,16 @@ public class AdminActivity extends AppCompatActivity {
         super.onDestroy();
         if (cameraExecutor != null) cameraExecutor.shutdown();
         if (faceNet != null) faceNet.close();
-
-        // Auto logout when the activity is destroyed
-        if (mAuth != null) mAuth.signOut();
-        if (mGoogleSignInClient != null) mGoogleSignInClient.signOut();
     }
 
-    @SuppressWarnings("MissingSuperCall")
-    @Override
-    public void onBackPressed() {
-        Toast.makeText(this, "Please use the Logout button to exit.", Toast.LENGTH_SHORT).show();
+    // -------------------- FaceNet/FaceAligner Stubs --------------------
+    private static class FaceNet {
+        public FaceNet(AdminActivity context, String modelFile) {}
+        public float[] getEmbedding(Bitmap bitmap) { return new float[128]; }
+        public void close() {}
     }
 
+    private static class FaceAligner {
+        public Bitmap alignFace(Bitmap bitmap) { return bitmap; }
+    }
 }

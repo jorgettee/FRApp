@@ -7,6 +7,7 @@
     android:gravity="center"
     android:background="#FFFFFF">
 
+    <!-- Title -->
     <TextView
         android:id="@+id/textViewTitle"
         android:layout_width="wrap_content"
@@ -14,9 +15,10 @@
         android:text="Enter Admin PIN"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:layout_marginBottom="32dp"
-        android:textColor="#000000"/>
+        android:textColor="#000000"
+        android:layout_marginBottom="32dp" />
 
+    <!-- PIN Input -->
     <EditText
         android:id="@+id/editTextPin"
         android:layout_width="200dp"
@@ -27,21 +29,16 @@
         android:textSize="20sp"
         android:maxLength="6"
         android:importantForAutofill="no"
-        android:layout_marginBottom="24dp"/>
+        android:background="@android:drawable/edit_text"
+        android:layout_marginBottom="24dp" />
 
+    <!-- Submit Button -->
     <Button
         android:id="@+id/buttonSubmit"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:text="Submit"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
-
-    <Button
-        android:id="@+id/buttonReset"
-        android:layout_width="200dp"
-        android:layout_height="wrap_content"
-        android:text="Reset PIN"
-        android:textColor="#FFFFFF" />
+        android:backgroundTint="@android:color/holo_blue_dark" />
 
 </LinearLayout>

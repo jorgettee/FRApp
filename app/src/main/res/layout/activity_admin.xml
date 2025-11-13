@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".AdminActivity"
     android:padding="16dp"
-    android:background="#121212"> <!-- Dark background -->
+    android:background="#121212">
 
     <!-- Camera preview -->
     <androidx.camera.view.PreviewView
@@ -38,16 +38,27 @@
         android:backgroundTint="#E53935"
         android:textColor="#FFFFFF" />
 
+    <!-- Import Drive button -->
+    <Button
+        android:id="@+id/buttonImportDrive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Import Photos from Google Drive"
+        android:layout_below="@id/buttonDeleteFaculty"
+        android:layout_marginTop="8dp"
+        android:backgroundTint="#43A047"
+        android:textColor="#FFFFFF" />
+
     <!-- Generate Embeddings button -->
     <Button
         android:id="@+id/buttonGenerateEmbeddings"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Generate Embeddings"
-        android:layout_below="@id/buttonDeleteFaculty"
+        android:text="Update Dataset"
+        android:layout_below="@id/buttonImportDrive"
         android:layout_marginTop="8dp"
-        android:backgroundTint="#43A047"
-        android:textColor="#FFFFFF" />
+        android:backgroundTint="#FBC02D"
+        android:textColor="#000000" />
 
     <!-- Status TextView -->
     <TextView
@@ -59,16 +70,5 @@
         android:layout_marginTop="16dp"
         android:textSize="16sp"
         android:textColor="#FFFFFF" />
-
-    <!-- Logout button -->
-    <Button
-        android:id="@+id/buttonLogout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Logout"
-        android:layout_below="@id/textStatus"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="#FDD835"
-        android:textColor="#000000" />
 
 </RelativeLayout>
