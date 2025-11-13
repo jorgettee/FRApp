@@ -139,12 +139,35 @@ public class AdminActivity extends AppCompatActivity {
         currentFacultyName = facultyName;
         File picturesDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         currentFacultyDir = new File(picturesDir, "FacultyPhotos/" + facultyName);
-        if (!currentFacultyDir.exists()) currentFacultyDir.mkdirs();
 
-        photoCount = 0;
-        textStatus.setText("Ready to capture photos for: " + facultyName);
-        startCameraForFaculty();
+        if (currentFacultyDir.exists()) {
+            // Faculty already exists — ask user whether to overwrite
+            new AlertDialog.Builder(this)
+                    .setTitle("Faculty Exists")
+                    .setMessage("A faculty named \"" + facultyName + "\" already exists. Do you want to overwrite their existing photos?")
+                    .setPositiveButton("Overwrite", (dialog, which) -> {
+                        // Delete existing folder and recreate
+                        deleteRecursive(currentFacultyDir);
+                        currentFacultyDir.mkdirs();
+
+                        photoCount = 0;
+                        textStatus.setText("Overwriting data for: " + facultyName);
+                        startCameraForFaculty();
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> {
+                        textStatus.setText("Cancelled adding " + facultyName);
+                        dialog.dismiss();
+                    })
+                    .show();
+        } else {
+            // Faculty doesn’t exist — proceed normally
+            currentFacultyDir.mkdirs();
+            photoCount = 0;
+            textStatus.setText("Ready to capture photos for: " + facultyName);
+            startCameraForFaculty();
+        }
     }
+
 
     private void showDeleteFacultyListDialog() {
         File facultyRoot = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "FacultyPhotos");
@@ -155,9 +178,11 @@ public class AdminActivity extends AppCompatActivity {
             new AlertDialog.Builder(this)
                     .setTitle("Select Faculty to Delete")
                     .setItems(facultyNames, (dialog, which) -> {
-                        deleteRecursive(new File(facultyRoot, facultyNames[which]));
-                        textStatus.setText("Deleted photos for: " + facultyNames[which]);
-                        Toast.makeText(this, "Regenerating embeddings...", Toast.LENGTH_SHORT).show();
+                        String nameToDelete = facultyNames[which];
+                        deleteRecursive(new File(facultyRoot, nameToDelete));
+                        removeFacultyFromEmbeddings(nameToDelete);
+                        textStatus.setText("Deleted faculty: " + nameToDelete);
+                        Toast.makeText(this, "Faculty removed and embeddings updated!", Toast.LENGTH_SHORT).show();
                     })
                     .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                     .show();
@@ -171,6 +196,58 @@ public class AdminActivity extends AppCompatActivity {
             for (File child : Objects.requireNonNull(fileOrDirectory.listFiles()))
                 deleteRecursive(child);
         fileOrDirectory.delete();
+    }
+
+    // -------------------- Remove Faculty from Embeddings --------------------
+    private void removeFacultyFromEmbeddings(String facultyName) {
+        try {
+            File embeddingsFile = new File(
+                    getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                    "FacultyPhotos/embeddings.json"
+            );
+
+            if (!embeddingsFile.exists()) {
+                Log.e("Embeddings", "Embeddings file not found!");
+                return;
+            }
+
+            // Read JSON file
+            StringBuilder jsonBuilder = new StringBuilder();
+            Scanner scanner = new Scanner(embeddingsFile);
+            while (scanner.hasNextLine()) {
+                jsonBuilder.append(scanner.nextLine());
+            }
+            scanner.close();
+
+            String jsonString = jsonBuilder.toString();
+            if (jsonString.isEmpty()) {
+                Log.e("Embeddings", "Embeddings file empty!");
+                return;
+            }
+
+            // Parse and remove faculty entry
+            Gson gson = new Gson();
+            Map<String, List<float[]>> allEmbeddings = gson.fromJson(
+                    jsonString,
+                    new com.google.gson.reflect.TypeToken<Map<String, List<float[]>>>(){}.getType()
+            );
+
+            if (allEmbeddings != null && allEmbeddings.containsKey(facultyName)) {
+                allEmbeddings.remove(facultyName);
+                Log.d("Embeddings", "Removed faculty from embeddings: " + facultyName);
+
+                // Write updated JSON back
+                try (FileWriter writer = new FileWriter(embeddingsFile)) {
+                    gson.toJson(allEmbeddings, writer);
+                }
+            } else {
+                Log.d("Embeddings", "Faculty not found in embeddings: " + facultyName);
+            }
+
+        } catch (Exception e) {
+            Log.e("Embeddings", "Error removing faculty: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // -------------------- CameraX --------------------

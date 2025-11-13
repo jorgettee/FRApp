@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
     private int confirmationTimeRemaining = VISUAL_COUNTDOWN_SECONDS;
     private FirebaseFirestore db;
 
-    private String currentLab = "CpeLab"; //CpeLab or CompLab3
+    private String currentLab = "CompLab3"; //CpeLab or CompLab3
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
