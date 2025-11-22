@@ -24,8 +24,7 @@ public class BluetoothService extends Service {
     private final IBinder binder = new LocalBinder();
     // Standard SerialPortService ID
     private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    // MAC address of your ESP32
-    private static final String ESP32_MAC_ADDRESS = "34:85:18:91:2E:3A"; // Replace with your ESP32's MAC address
+    private static final String ESP32_MAC_ADDRESS = ""; // MAC address of your ESP32
 
     public class LocalBinder extends Binder {
         BluetoothService getService() {
@@ -59,9 +58,8 @@ public class BluetoothService extends Service {
             return false;
         }
 
-        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(ESP32_MAC_ADDRESS);
-
         try {
+            BluetoothDevice device = bluetoothAdapter.getRemoteDevice(ESP32_MAC_ADDRESS);
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG, "Bluetooth connect permission not granted");
                 return false;
@@ -70,10 +68,15 @@ public class BluetoothService extends Service {
             bluetoothSocket.connect();
             outputStream = bluetoothSocket.getOutputStream();
             return true;
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Invalid Bluetooth MAC address: " + ESP32_MAC_ADDRESS, e);
+            return false;
         } catch (IOException e) {
             Log.e(TAG, "Error connecting to ESP32", e);
             try {
-                bluetoothSocket.close();
+                if (bluetoothSocket != null) {
+                    bluetoothSocket.close();
+                }
             } catch (IOException ex) {
                 Log.e(TAG, "Error closing socket", ex);
             }
@@ -81,22 +84,23 @@ public class BluetoothService extends Service {
         }
     }
 
-    public void sendData(String data) {
-        if (outputStream != null) {
+    public void sendData(String message) {
+        String dataToSend = "";
+        if ("lock".equals(message)) {
+            dataToSend = "1";
+        } else if ("unlock".equals(message)) {
+            dataToSend = "0";
+        }
+
+        if (outputStream != null && !dataToSend.isEmpty()) {
             try {
-                outputStream.write(data.getBytes());
-                Log.d(TAG, "Sent data: " + data);
+                outputStream.write(dataToSend.getBytes());
+                Log.d(TAG, "Sent data: " + dataToSend);
             } catch (IOException e) {
                 Log.e(TAG, "Error sending data", e);
             }
-        }
-    }
-
-    public void setDoorState(boolean locked) {
-        if (locked) {
-            sendData("1");
         } else {
-            sendData("0");
+            Log.w(TAG, "Could not send data: outputStream is null or message is not valid.");
         }
     }
 

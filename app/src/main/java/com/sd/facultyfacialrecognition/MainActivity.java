@@ -510,13 +510,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void sendLockCommand() {
         if (mIsBound) {
-            mBluetoothService.sendData("lock");
+            mBluetoothService.sendData("1");
         }
     }
 
     private void sendUnlockCommand() {
         if (mIsBound) {
-            mBluetoothService.sendData("unlock");
+            mBluetoothService.sendData("0");
         }
     }
 
