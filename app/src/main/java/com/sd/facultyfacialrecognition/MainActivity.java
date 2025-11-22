@@ -1,13 +1,14 @@
 package com.sd.facultyfacialrecognition;
 
-import android.Manifest;
+import android.content.ComponentName;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
-import android.util.Size;
 import android.content.Intent;
 import android.view.View;
 import android.widget.Button;
@@ -22,7 +23,6 @@ import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -41,9 +41,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -54,7 +52,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.google.gson.reflect.TypeToken;
 
 import java.text.SimpleDateFormat;
@@ -68,23 +65,19 @@ import com.google.firebase.database.FirebaseDatabase;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
-
     private PreviewView previewView;
     private FaceOverlayView overlayView;
     private TextView statusTextView;
     private TextView countdownTextView;
     private Button confirmYesButton;
     private Button confirmNoButton;
-    private Button btnBreakDone;
 
     private FaceNet faceNet;
     private ImageAligner imageAligner;
     private ExecutorService cameraExecutor;
 
     private final Map<String, float[]> KNOWN_FACE_EMBEDDINGS = new HashMap<>();
-    private Map<String, List<float[]>> facultyEmbeddings = new HashMap<>();
-
-    private float dynamicThreshold = 0.8f;
+    private final Map<String, List<float[]>> facultyEmbeddings = new HashMap<>();
 
     private static final int STABILITY_FRAMES_NEEDED = 20;
     private static final long UNLOCK_COOLDOWN_MILLIS = 10000;
@@ -100,7 +93,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean isAwaitingLockConfirmation = false;
     private boolean isAwaitingUnlockConfirmation = false;
     private boolean isAwaitingLockerRecognition = false;
-    private boolean isReturningFromBreak = false;
 
     private String authorizedLocker = null;
     private String authorizedUnlocker = null;
@@ -113,7 +105,28 @@ public class MainActivity extends AppCompatActivity {
     private int confirmationTimeRemaining = VISUAL_COUNTDOWN_SECONDS;
     private FirebaseFirestore db;
 
-    private String currentLab = "CompLab3"; //CpeLab or CompLab3
+    private final String currentLab = "CpeLab"; //CpeLab or CompLab3
+
+    private BluetoothService mBluetoothService;
+    private boolean mIsBound = false;
+
+    private final ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            BluetoothService.LocalBinder binder = (BluetoothService.LocalBinder) service;
+            mBluetoothService = binder.getService();
+            mIsBound = true;
+            // Automatically connect to the device when the service is connected
+            if (!mBluetoothService.connectToDevice()) {
+                Log.e(TAG, "Failed to connect to ESP32");
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mIsBound = false;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
 
         confirmYesButton = findViewById(R.id.confirm_yes_button);
         confirmNoButton = findViewById(R.id.confirm_no_button);
-        btnBreakDone = findViewById(R.id.btn_break_done);
+        Button btnBreakDone = findViewById(R.id.btn_break_done);
 
         confirmYesButton.setVisibility(View.GONE);
         confirmNoButton.setVisibility(View.GONE);
@@ -144,6 +157,9 @@ public class MainActivity extends AppCompatActivity {
         testLoadEmbeddings();
 
         db = FirebaseFirestore.getInstance();
+
+        Intent intent = new Intent(this, BluetoothService.class);
+        bindService(intent, mConnection, BIND_AUTO_CREATE);
 
     }
 
@@ -165,8 +181,6 @@ public class MainActivity extends AppCompatActivity {
 
         startCamera();
     }
-
-
 
     private void startConfirmationTimer(boolean isLock) {
         stopConfirmationTimer();
@@ -191,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void startVisualCountdown(String action, String matchName) {
+    private void startVisualCountdown() {
         stopVisualCountdown();
 
         confirmationTimeRemaining = VISUAL_COUNTDOWN_SECONDS;
@@ -333,7 +347,6 @@ public class MainActivity extends AppCompatActivity {
         lastLockTimestamp = System.currentTimeMillis();
 
         final String facultyNameFinal = authorizedLocker; // make final for lambda
-        final String status = "LOCKED";
 
         Log.d("DoorLockDebug", "Handling LOCK confirmation for faculty: " + facultyNameFinal);
 
@@ -341,7 +354,9 @@ public class MainActivity extends AppCompatActivity {
         logDoorEvent(authorizedLocker, "End Class", "LOCKED");
 
         // Update Firestore with debug
-        updateFacultyStatusWithDebug(facultyNameFinal, status);
+        updateFacultyStatusWithDebug(facultyNameFinal, "LOCKED");
+
+        sendLockCommand();
 
         resetStateAfterAction();
         updateUiOnThread("System Locked", "Door secured. Cooldown active.");
@@ -367,6 +382,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Realtime Database update
         updateRealtimeStatus(facultyStatus, doorStatus);
+
+        sendUnlockCommand();
 
         if (cameraExecutor != null) {
             cameraExecutor.shutdown();
@@ -412,12 +429,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         final String facultyNameFinal = facultyName;
-        final String statusFinal = status;
 
-        Log.d("DoorLockDebug", "Updating Firestore for faculty: " + facultyNameFinal + " with status: " + statusFinal);
+        Log.d("DoorLockDebug", "Updating Firestore for faculty: " + facultyNameFinal + " with status: " + status);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("status", statusFinal); // will be "LOCKED", "UNLOCKED", or "BREAK"
+        data.put("status", status); // will be "LOCKED", "UNLOCKED", or "BREAK"
         data.put("timestamp", System.currentTimeMillis());
 
         db.collection(currentLab)
@@ -449,16 +465,6 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-
-
-    public void onBackInClassScanned() {
-        stableMatchCount = 0;
-        authorizedUnlocker = null;
-        stableMatchName = "Scanning...";
-        currentBestMatch = "Scanning...";
-        updateUiOnThread("Professor Back in Class", "Please scan to confirm identity.");
-    }
-
     public void onEndClassClicked(View view) {
         if (authorizedUnlocker == null) return;
 
@@ -477,6 +483,7 @@ public class MainActivity extends AppCompatActivity {
         updateRealtimeStatus(facultyStatus, doorStatus);
 
         isDoorLocked = true;
+        sendLockCommand();
 
         Intent intent = new Intent(MainActivity.this, ThankYouActivity.class);
         intent.putExtra("message", "Class ended and door is locked, thank you!");
@@ -484,12 +491,8 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-
-
     public void onBreakDoneClicked(View view) {
         if (authorizedUnlocker == null) return;
-
-        isReturningFromBreak = true;
 
         String facultyStatus = "In Class";
         String doorStatus = "UNLOCKED";
@@ -497,12 +500,25 @@ public class MainActivity extends AppCompatActivity {
         // Realtime Database update
         updateRealtimeStatus(facultyStatus, doorStatus);
 
+        sendUnlockCommand();
+
         Intent intent = new Intent(MainActivity.this, DashboardActivity.class);
         intent.putExtra("profName", authorizedUnlocker);
         startActivity(intent);
         finish();
     }
 
+    private void sendLockCommand() {
+        if (mIsBound) {
+            mBluetoothService.sendData("lock");
+        }
+    }
+
+    private void sendUnlockCommand() {
+        if (mIsBound) {
+            mBluetoothService.sendData("unlock");
+        }
+    }
 
 
     public void onConfirmNoClicked(View view) {
@@ -538,11 +554,6 @@ public class MainActivity extends AppCompatActivity {
         currentBestMatch = "Scanning...";
     }
 
-    private boolean allPermissionsGranted() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED;
-    }
-
     private void startCamera() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         cameraProviderFuture.addListener(() -> {
@@ -564,7 +575,6 @@ public class MainActivity extends AppCompatActivity {
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
         ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
-                .setTargetResolution(new Size(640, 480))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build();
 
@@ -605,8 +615,10 @@ public class MainActivity extends AppCompatActivity {
 
         String currentBestFrameMatch = "Scanning...";
         float bestDist = Float.MAX_VALUE;
+        String finalMessage = "";
+        String countdownMessage = "";
 
-        if (faces.isEmpty() || faces.size() > 1) {
+        if (faces.size() != 1) {
             // No single face detected, don't calculate accuracy or log anything
             currentBestFrameMatch = "Scanning...";
         } else {
@@ -639,18 +651,15 @@ public class MainActivity extends AppCompatActivity {
                     // Log only if there’s a valid match
                     Log.d("FaceRecognitionRanking", "===== Ranking of Matches =====");
                     for (Map.Entry<String, Float> match : sortedList) {
-                        Log.d("FaceRecognitionRanking", String.format("%d. %s : %.4f",
+                        Log.d("FaceRecognitionRanking", String.format(Locale.US, "%d. %s : %.4f",
                                 rank++, match.getKey(), match.getValue()));
                     }
 
                     Map.Entry<String, Float> bestMatch = sortedList.get(0);
-                    Log.d("FaceRecognition", String.format("Best match this frame: %s | Accuracy = %.4f",
+                    Log.d("FaceRecognition", String.format(Locale.US, "Best match this frame: %s | Accuracy = %.4f",
                             bestMatch.getKey(), bestMatch.getValue()));
 
                     currentBestFrameMatch = bestMatch.getKey();
-
-                    String finalMessage = "";
-                    String countdownMessage = "";
 
                     // --- BLOCK ACCESS IF UNKNOWN DETECTED ---
                     if ("Unknown".equals(currentBestFrameMatch)) {
@@ -670,9 +679,6 @@ public class MainActivity extends AppCompatActivity {
 
             graphics.add(new FaceOverlayView.FaceGraphic(face.getBoundingBox(), "", bestDist));
         }
-
-        String finalMessage = "";
-        String countdownMessage = "";
 
         this.currentBestMatch = currentBestFrameMatch;
 
@@ -705,17 +711,19 @@ public class MainActivity extends AppCompatActivity {
                     stableMatchCount = 0;
 
                     startConfirmationTimer(true);
-                    startVisualCountdown("Lock", authorizedLocker);
+                    startVisualCountdown();
+                    finalMessage = "";
+                    countdownMessage = "";
 
                 } else {
                     isAwaitingLockerRecognition = false;
                     finalMessage = "Recognition Failed";
                     countdownMessage = "Lock initiation failed. Please try again.";
                 }
-            } else if (stableMatchCount > 0 && !currentBestFrameMatch.equals("Unknown") && !currentBestFrameMatch.equals("Scanning...")) {
+            } else if (stableMatchCount > 0 && !currentBestFrameMatch.equals("Scanning...")) {
                 int remainingFrames = STABILITY_FRAMES_NEEDED - stableMatchCount;
                 finalMessage = "Recognizing: " + currentBestMatch;
-                countdownMessage = String.format("Hold Steady to LOCK! (%d frames remaining)", remainingFrames);
+                countdownMessage = String.format(Locale.US, "Hold Steady to LOCK! (%d frames remaining)", remainingFrames);
             } else {
                 finalMessage = "Awaiting Locker Recognition";
                 countdownMessage = "Please hold a faculty face steady for 5 seconds to initiate lock.";
@@ -727,7 +735,7 @@ public class MainActivity extends AppCompatActivity {
             if (timeSinceLock < UNLOCK_COOLDOWN_MILLIS) {
                 long remainingSeconds = (UNLOCK_COOLDOWN_MILLIS - timeSinceLock) / 1000 + 1;
                 finalMessage = "System Locked";
-                countdownMessage = String.format("Unlock Cooldown Active: %d seconds remaining.", remainingSeconds);
+                countdownMessage = String.format(Locale.US, "Unlock Cooldown Active: %d seconds remaining.", remainingSeconds);
 
                 updateUiOnThread(finalMessage, countdownMessage);
                 runOnUiThread(() -> overlayView.setFaces(graphics));
@@ -747,17 +755,19 @@ public class MainActivity extends AppCompatActivity {
                     stableMatchCount = 0;
 
                     startConfirmationTimer(false);
-                    startVisualCountdown("Unlock", stableMatchName);
+                    startVisualCountdown();
+                    finalMessage = "";
+                    countdownMessage = "";
 
                 } else {
                     finalMessage = "Access Denied";
                     countdownMessage = "Recognition Failed. Please try again.";
                     stableMatchCount = 0;
                 }
-            } else if (stableMatchCount > 0 && !currentBestFrameMatch.equals("Unknown") && !currentBestFrameMatch.equals("Scanning...")) {
+            } else if (stableMatchCount > 0 && !currentBestFrameMatch.equals("Scanning...")) {
                 int remainingFrames = STABILITY_FRAMES_NEEDED - stableMatchCount;
                 finalMessage = "Recognizing: " + currentBestMatch;
-                countdownMessage = String.format("Hold Steady for unlock! (%d frames remaining)", remainingFrames);
+                countdownMessage = String.format(Locale.US, "Hold Steady for unlock! (%d frames remaining)", remainingFrames);
             } else {
                 finalMessage = "Awaiting Recognition";
                 countdownMessage = "Scanning for faculty...";
@@ -856,7 +866,7 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
 
-            String jsonStr = new String(Files.readAllBytes(embeddingsFile.toPath()), StandardCharsets.UTF_8);
+            String jsonStr = new String(java.nio.file.Files.readAllBytes(embeddingsFile.toPath()), StandardCharsets.UTF_8);
             JSONObject jsonObj = new JSONObject(jsonStr);
 
             facultyEmbeddings.clear();
@@ -898,7 +908,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Log.d(TAG, "✅ Embeddings loaded successfully from storage.");
-            Log.d(TAG, "Faculties loaded: " + facultyEmbeddings.keySet().size());
+            Log.d(TAG, "Faculties loaded: " + facultyEmbeddings.size());
             Log.d(TAG, "KNOWN_FACE_EMBEDDINGS loaded: " + KNOWN_FACE_EMBEDDINGS.size());
 
             return true;
@@ -917,99 +927,6 @@ public class MainActivity extends AppCompatActivity {
             sb.append(new String(buffer, 0, length, StandardCharsets.UTF_8));
         }
         return sb.toString();
-    }
-
-
-
-
-    private float computeDynamicThreshold(Map<String, float[]> embeddingsMap) {
-        List<Float> intraDists = new ArrayList<>();
-        List<Float> interDists = new ArrayList<>();
-
-        List<String> names = new ArrayList<>(embeddingsMap.keySet());
-
-        for (String name : names) {
-            float[] emb = embeddingsMap.get(name);
-            if (emb != null) {
-                float intra = simulateNoiseDistance(emb);
-                intraDists.add(intra);
-            }
-        }
-
-        for (int i = 0; i < names.size(); i++) {
-            for (int j = i + 1; j < names.size(); j++) {
-                float[] embA = embeddingsMap.get(names.get(i));
-                float[] embB = embeddingsMap.get(names.get(j));
-                if (embA != null && embB != null) {
-                    float d = FaceNet.distance(embA, embB);
-                    interDists.add(d);
-                }
-            }
-        }
-
-        float meanIntra = average(intraDists);
-        float meanInter = average(interDists);
-        float threshold = (meanIntra + meanInter) / 2;
-
-        Log.d("DynamicThreshold", "Mean Intra = " + meanIntra +
-                " | Mean Inter = " + meanInter +
-                " | Computed Threshold = " + threshold);
-
-        // Safety check (if somehow it fails)
-        if (threshold < 0.3f || threshold > 1.3f) threshold = 0.9f;
-
-        return threshold;
-    }
-
-    private float simulateNoiseDistance(float[] emb) {
-        float[] noisy = emb.clone();
-        for (int i = 0; i < noisy.length; i++) {
-            noisy[i] += (Math.random() - 0.5f) * 0.02f; // small random noise
-        }
-        return FaceNet.distance(emb, noisy);
-    }
-
-    private float average(List<Float> list) {
-        if (list == null || list.isEmpty()) return 0f;
-        float sum = 0f;
-        for (float v : list) sum += v;
-        return sum / list.size();
-    }
-
-    private void evaluateRecognitionAccuracy() {
-        if (KNOWN_FACE_EMBEDDINGS.size() < 2) {
-            Log.d("ModelAccuracy", "Not enough embeddings to evaluate.");
-            return;
-        }
-
-        int totalComparisons = 0;
-        int correctMatches = 0;
-
-        List<String> names = new ArrayList<>(KNOWN_FACE_EMBEDDINGS.keySet());
-        for (int i = 0; i < names.size(); i++) {
-            String nameA = names.get(i);
-            float[] embA = KNOWN_FACE_EMBEDDINGS.get(nameA);
-            if (embA == null) continue;
-
-            for (int j = 0; j < names.size(); j++) {
-                String nameB = names.get(j);
-                float[] embB = KNOWN_FACE_EMBEDDINGS.get(nameB);
-                if (embB == null) continue;
-
-                float distance = FaceNet.distance(embA, embB);
-                boolean samePerson = nameA.equals(nameB);
-                boolean recognized = distance < dynamicThreshold;
-
-                if ((recognized && samePerson) || (!recognized && !samePerson)) {
-                    correctMatches++;
-                }
-
-                totalComparisons++;
-            }
-        }
-
-        float accuracy = (float) correctMatches / totalComparisons * 100f;
-        Log.d("ModelAccuracy", String.format("Recognition Accuracy: %.2f%% (Threshold = %.3f)", accuracy, dynamicThreshold));
     }
 
     private void testLoadEmbeddings() {
@@ -1065,6 +982,10 @@ public class MainActivity extends AppCompatActivity {
         stopVisualCountdown();
         if (cameraExecutor != null) cameraExecutor.shutdown();
         if (faceNet != null) faceNet.close();
+        if (mIsBound) {
+            unbindService(mConnection);
+            mIsBound = false;
+        }
     }
 
     @Override

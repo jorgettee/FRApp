@@ -19,8 +19,8 @@ public class PinLockActivity extends AppCompatActivity {
     private EditText editTextPin;
     private Button buttonSubmit;
 
-    private static final String FIXED_PIN = "1234"; // Your fixed admin PIN
-    private FirebaseFirestore firestore; // Firestore reference
+    private static final String FIXED_PIN = "1234";
+    private FirebaseFirestore firestore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
