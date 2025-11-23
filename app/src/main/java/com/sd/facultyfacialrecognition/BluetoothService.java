@@ -24,7 +24,7 @@ public class BluetoothService extends Service {
     private final IBinder binder = new LocalBinder();
     // Standard SerialPortService ID
     private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private static final String ESP32_MAC_ADDRESS = ""; // MAC address of your ESP32
+    private static final String ESP32_MAC_ADDRESS = ""; // MAC address ESP32
 
     public class LocalBinder extends Binder {
         BluetoothService getService() {

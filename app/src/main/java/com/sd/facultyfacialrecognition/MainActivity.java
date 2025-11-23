@@ -680,8 +680,6 @@ public class MainActivity extends AppCompatActivity {
             graphics.add(new FaceOverlayView.FaceGraphic(face.getBoundingBox(), "", bestDist));
         }
 
-        this.currentBestMatch = currentBestFrameMatch;
-
         if (isAwaitingLockConfirmation || isAwaitingUnlockConfirmation) {
 
             String authorizedName = isAwaitingLockConfirmation ? authorizedLocker : stableMatchName;

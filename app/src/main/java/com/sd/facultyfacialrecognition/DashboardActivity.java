@@ -24,7 +24,7 @@ public class DashboardActivity extends AppCompatActivity {
         statusText = findViewById(R.id.text_status);
         scanAgainButton = findViewById(R.id.btn_scan_again);
 
-        welcomeText.setText("Welcome, " + profName);
+        welcomeText.setText("Prof. " + profName);
 
         String status = getIntent().getStringExtra("status");
         if (status == null) status = "Status: In Class";
