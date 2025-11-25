@@ -26,6 +26,11 @@ import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.face.Face;
@@ -41,7 +46,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -53,12 +60,6 @@ import java.util.concurrent.Executors;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 
 
 
@@ -96,6 +97,8 @@ public class MainActivity extends AppCompatActivity {
 
     private String authorizedLocker = null;
     private String authorizedUnlocker = null;
+    private String occupyingFacultyName = null;
+    private String pendingConfirmationName = null;
     private long lastLockTimestamp = 0;
 
     private Handler confirmationHandler;
@@ -151,16 +154,49 @@ public class MainActivity extends AppCompatActivity {
         cameraExecutor = Executors.newSingleThreadExecutor();
         imageAligner = new ImageAligner();
 
-
-        initializeSystem();
-        startCamera();
-        testLoadEmbeddings();
-
         db = FirebaseFirestore.getInstance();
+
+        checkRoomStatusAndInitialize();
 
         Intent intent = new Intent(this, BluetoothService.class);
         bindService(intent, mConnection, BIND_AUTO_CREATE);
 
+    }
+
+    private void checkRoomStatusAndInitialize() {
+        FirebaseDatabase database = FirebaseDatabase.getInstance("https://facultyfacialrecognition-default-rtdb.asia-southeast1.firebasedatabase.app/");
+        DatabaseReference dbRef = database.getReference(currentLab).child("Latest");
+
+        dbRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    String facultyStatus = snapshot.child("facultyStatus").getValue(String.class);
+                    String facultyName = snapshot.child("facultyName").getValue(String.class);
+
+                    if ("In Class".equals(facultyStatus) || "Break".equals(facultyStatus)) {
+                        // Room is occupied, store the name and continue
+                        occupyingFacultyName = facultyName;
+                        updateUiOnThread("Room Occupied", "Currently in use by Prof. " + facultyName);
+                    }
+                }
+                // Always proceed with initialization regardless of room status
+                proceedWithInitialization();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Failed to read room status.", error.toException());
+                // Assume room is available on error to not block usage
+                proceedWithInitialization();
+            }
+        });
+    }
+
+    private void proceedWithInitialization() {
+        initializeSystem();
+        startCamera();
+        testLoadEmbeddings();
     }
 
     private void initializeSystem() {
@@ -178,14 +214,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error initializing FaceNet or embeddings", e);
         }
-
-        startCamera();
     }
 
     private void startConfirmationTimer(boolean isLock) {
         stopConfirmationTimer();
 
         confirmationRunnable = () -> {
+            pendingConfirmationName = null;
             if (isLock) {
                 onConfirmNoClicked(null);
                 updateUiOnThread("Lock Timed Out", "Lock request cancelled due to inactivity.");
@@ -216,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
                 String currentAction = isAwaitingLockConfirmation ? "Lock" : "Unlock";
 
                 if (confirmationTimeRemaining > 0) {
-                    String name = isAwaitingLockConfirmation ? authorizedLocker : stableMatchName;
+                    String name = pendingConfirmationName;
 
                     updateUiOnThread("Confirm " + currentAction + " Identity",
                             "Is this you: " + name + "?\nAction auto-cancels in " + (CONFIRMATION_TIMEOUT_MILLIS / 1000) + "s (Visual countdown: " + confirmationTimeRemaining + "s).");
@@ -224,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
                     confirmationTimeRemaining--;
                     countdownDisplayHandler.postDelayed(this, 1000);
                 } else {
-                    String name = isAwaitingLockConfirmation ? authorizedLocker : stableMatchName;
+                    String name = pendingConfirmationName;
                     String finalStatus = isAwaitingLockConfirmation ? "Confirm Lock Identity" : "Confirm Unlock Identity";
                     String finalCountdown = "Is this you: " + name + "? (Awaiting confirmation)";
                     updateUiOnThread(finalStatus, finalCountdown);
@@ -253,6 +288,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (isAwaitingUnlockConfirmation) {
             handleUnlockConfirmation();
         }
+        pendingConfirmationName = null;
     }
 
     private String getCurrentTimestamp() {
@@ -365,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
     private void handleUnlockConfirmation() {
         isDoorLocked = false;
         isAwaitingUnlockConfirmation = false;
-        final String facultyNameFinal = stableMatchName;
+        final String facultyNameFinal = pendingConfirmationName;
         authorizedUnlocker = facultyNameFinal;
 
         String facultyStatus = "In Class";
@@ -524,6 +560,7 @@ public class MainActivity extends AppCompatActivity {
     public void onConfirmNoClicked(View view) {
         stopConfirmationTimer();
         stopVisualCountdown();
+        pendingConfirmationName = null;
 
         if (isAwaitingLockConfirmation) {
             isAwaitingLockConfirmation = false;
@@ -649,7 +686,7 @@ public class MainActivity extends AppCompatActivity {
                     sortedList.sort((a, b) -> Float.compare(b.getValue(), a.getValue()));
 
                     // Log only if there’s a valid match
-                    Log.d("FaceRecognitionRanking", "===== Ranking of Matches =====");
+                    Log.d("FaceRecognitionRanking", "===== Ranking of Matches ======");
                     for (Map.Entry<String, Float> match : sortedList) {
                         Log.d("FaceRecognitionRanking", String.format(Locale.US, "%d. %s : %.4f",
                                 rank++, match.getKey(), match.getValue()));
@@ -682,7 +719,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (isAwaitingLockConfirmation || isAwaitingUnlockConfirmation) {
 
-            String authorizedName = isAwaitingLockConfirmation ? authorizedLocker : stableMatchName;
+            String authorizedName = pendingConfirmationName;
 
             if (countdownDisplayRunnable == null) {
                 finalMessage = isAwaitingLockConfirmation ? "Confirm Lock Identity" : "Confirm Unlock Identity";
@@ -706,6 +743,7 @@ public class MainActivity extends AppCompatActivity {
                     isAwaitingLockerRecognition = false;
                     isAwaitingLockConfirmation = true;
                     authorizedLocker = stableMatchName;
+                    pendingConfirmationName = stableMatchName;
                     stableMatchCount = 0;
 
                     startConfirmationTimer(true);
@@ -744,12 +782,20 @@ public class MainActivity extends AppCompatActivity {
 
             if (stableMatchCount >= STABILITY_FRAMES_NEEDED) {
 
+                if (occupyingFacultyName != null && !stableMatchName.equals(occupyingFacultyName)) {
+                    updateUiOnThread("Access Denied", "Room is currently occupied by Prof. " + occupyingFacultyName);
+                    stableMatchCount = 0; // Reset to allow another scan
+                    runOnUiThread(() -> overlayView.setFaces(graphics));
+                    return;
+                }
+
                 boolean isUnlockIdentityConfirmed = !stableMatchName.equals("Unknown") &&
                         !stableMatchName.equals("Scanning...") &&
                         stableMatchName.equals(currentBestMatch);
 
                 if (isUnlockIdentityConfirmed) {
                     isAwaitingUnlockConfirmation = true;
+                    pendingConfirmationName = stableMatchName;
                     stableMatchCount = 0;
 
                     startConfirmationTimer(false);
