@@ -44,6 +44,10 @@
         <activity android:name=".ActionActivity" />
         <activity android:name=".ThankYouActivity" />
 
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
+
 
     </application>
 
