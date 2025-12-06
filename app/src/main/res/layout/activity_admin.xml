@@ -1,74 +1,183 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/adminLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".AdminActivity"
-    android:padding="16dp"
-    android:background="#121212">
+    android:clipToPadding="false"
+    android:padding="0dp"
+    android:background="@color/light_blue"
+    tools:context=".AdminActivity">
 
-    <!-- Camera preview -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/previewView"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="match_parent"
+        android:layout_margin="-10dp">
+
+        <ImageView
+            android:layout_width="1330dp"
+            android:layout_height="match_parent"
+            android:alpha="0.15"
+            android:scaleType="centerCrop"
+
+            android:src="@drawable/bsu_background" />
+    </FrameLayout>
+
+    <RelativeLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:background="#000000" />
+        android:paddingVertical="4dp">
 
-    <!-- Add Faculty button -->
-    <Button
-        android:id="@+id/buttonAddFaculty"
+        <ImageView
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="Back"
+            android:padding="16dp"
+            android:src="@drawable/baseline_arrow_back_24" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="Admin Page"
+            android:textColor="@android:color/black"
+            android:fontFamily="@font/roundelay_extrabold"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@+id/topLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Add Faculty"
-        android:layout_below="@id/previewView"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="#1E88E5"
-        android:textColor="#FFFFFF" />
+        android:layout_below="@id/headerLayout"
+        android:orientation="horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="4dp">
 
-    <!-- Delete Faculty button -->
-    <Button
-        android:id="@+id/buttonDeleteFaculty"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Delete Faculty"
-        android:layout_below="@id/buttonAddFaculty"
-        android:layout_marginTop="8dp"
-        android:backgroundTint="#E53935"
-        android:textColor="#FFFFFF" />
+        <!-- Camera preview on the left -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="400dp"
+            android:layout_weight="1"
+            app:cardCornerRadius="16dp"
+            app:strokeColor="#0c4171"
+            app:strokeWidth="2dp">
 
-    <!-- Import Drive button -->
-    <Button
-        android:id="@+id/buttonImportDrive"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Import Photos"
-        android:layout_below="@id/buttonDeleteFaculty"
-        android:layout_marginTop="8dp"
-        android:backgroundTint="#43A047"
-        android:textColor="#FFFFFF" />
+            <androidx.camera.view.PreviewView
+                android:id="@+id/previewView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
-    <!-- Generate Embeddings button -->
-    <Button
-        android:id="@+id/buttonGenerateEmbeddings"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Update Dataset"
-        android:layout_below="@id/buttonImportDrive"
-        android:layout_marginTop="8dp"
-        android:backgroundTint="#FBC02D"
-        android:textColor="#000000" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Buttons on the right -->
+        <LinearLayout
+            android:id="@+id/buttonsLayout"
+            android:layout_width="186dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:orientation="vertical">
+
+            <!-- Add Faculty button -->
+
+            <ImageView
+                android:id="@+id/imageView5"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:scaleType="centerCrop"
+                app:srcCompat="@drawable/headerlogo" />
+
+            <ImageView
+                android:id="@+id/imageView"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                app:srcCompat="@drawable/app_logo" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="13dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonAddFaculty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:elevation="4dp"
+                android:text="Add Faculty"
+                android:textColor="@color/white"
+                app:backgroundTint="#1E88E5"
+                app:cornerRadius="20dp"
+                app:strokeColor="@color/blue"
+                android:fontFamily="@font/roundelay_extrabold"
+                app:strokeWidth="2dp" />
+
+            <!-- Delete Faculty button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonDeleteFaculty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:elevation="4dp"
+                android:text="Delete Faculty"
+                android:textColor="@android:color/white"
+                app:backgroundTint="#E53935"
+                app:cornerRadius="20dp"
+                app:strokeColor="@color/dark_red"
+                android:fontFamily="@font/roundelay_extrabold"
+                app:strokeWidth="2dp" />
+
+            <!-- Import Drive button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonImportDrive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:elevation="4dp"
+                android:text="Import Photos"
+                android:textColor="@android:color/white"
+                app:backgroundTint="#43A047"
+                app:cornerRadius="20dp"
+                app:strokeColor="@color/dark_green"
+                android:fontFamily="@font/roundelay_extrabold"
+                app:strokeWidth="2dp" />
+
+            <!-- Generate Embeddings button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonGenerateEmbeddings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:elevation="4dp"
+                android:text="Update Dataset"
+                android:textColor="@android:color/white"
+                app:backgroundTint="#fb9b1e"
+                app:cornerRadius="20dp"
+                app:strokeColor="@color/dark_orange"
+                android:fontFamily="@font/roundelay_extrabold"
+                app:strokeWidth="2dp" />
+        </LinearLayout>
+    </LinearLayout>
 
     <!-- Status TextView -->
     <TextView
         android:id="@+id/textStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="623dp"
+        android:layout_height="47dp"
+        android:layout_below="@id/topLayout"
+        android:layout_marginTop="10dp"
+        android:paddingStart="20dp"
         android:text="Status messages will appear here"
-        android:layout_below="@id/buttonGenerateEmbeddings"
-        android:layout_marginTop="16dp"
-        android:textSize="16sp"
-        android:textColor="#FFFFFF" />
+        android:textColor="@color/black"
+        android:fontFamily="@font/roundelay_extrabold"
+        android:textSize="18sp"
+        android:textStyle=""/>
 
 </RelativeLayout>

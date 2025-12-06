@@ -5,11 +5,15 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -27,6 +31,7 @@ import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 
 import com.google.android.gms.auth.api.signin.*;
 import com.google.android.gms.common.api.ApiException;
@@ -71,6 +76,7 @@ public class AdminActivity extends AppCompatActivity {
     private Button buttonAddFaculty, buttonDeleteFaculty, buttonImportDrive, buttonGenerateEmbeddings;
     private TextView textStatus;
     private PreviewView previewView;
+    private ImageView backButton;
 
     private String currentFacultyName;
     private File currentFacultyDir;
@@ -95,6 +101,7 @@ public class AdminActivity extends AppCompatActivity {
         buttonGenerateEmbeddings = findViewById(R.id.buttonGenerateEmbeddings);
         textStatus = findViewById(R.id.textStatus);
         previewView = findViewById(R.id.previewView);
+        backButton = findViewById(R.id.backButton);
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         faceAligner = new FaceAligner(this);
@@ -108,6 +115,7 @@ public class AdminActivity extends AppCompatActivity {
 
         requestStoragePermissions();
 
+        backButton.setOnClickListener(v -> finish());
         buttonAddFaculty.setOnClickListener(v -> showAddFacultyDialog());
         buttonDeleteFaculty.setOnClickListener(v -> showDeleteFacultyListDialog());
         buttonImportDrive.setOnClickListener(v -> promptFacultyNameForDriveImport());
@@ -130,23 +138,48 @@ public class AdminActivity extends AppCompatActivity {
     // -------------------- Add Faculty --------------------
     private void showAddFacultyDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Enter Faculty Name");
 
-        final EditText input = new EditText(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.popup_input_window, null);
+
+        TextView titleView = dialogView.findViewById(R.id.dialogTitle);
+        EditText input = dialogView.findViewById(R.id.inputFacultyName);
+        TextView errorText = dialogView.findViewById(R.id.errorText);
+
+        titleView.setText("Add Faculty");
+        input.setHint("Enter faculty name...");
+        input.setHintTextColor(ContextCompat.getColor(this, R.color.light_gray));
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        builder.setView(input);
 
-        builder.setPositiveButton("Next", (dialog, which) -> {
-            String facultyName = input.getText().toString().trim();
-            if (facultyName.isEmpty()) {
-                textStatus.setText("Faculty name cannot be empty.");
-                return;
-            }
-            startNewFacultyRegistration(facultyName);
-        });
+        builder.setView(dialogView);
 
+        builder.setPositiveButton("Add", null);
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-        builder.show();
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setTextColor(ContextCompat.getColor(this, R.color.dark_blue));
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                .setTextColor(ContextCompat.getColor(this, R.color.dark_red));
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String facultyName = input.getText().toString().trim();
+
+            if (facultyName.length() < 7) {
+                errorText.setText("Characters must have more than 7 letters");
+                errorText.setVisibility(View.VISIBLE);
+                input.setText("");
+            } else if (!facultyName.matches("[a-zA-Z. ]+")) {
+                errorText.setText("Only letters are allowed");
+                errorText.setVisibility(View.VISIBLE);
+                input.setText("");
+            } else {
+                errorText.setVisibility(View.GONE);
+                startNewFacultyRegistration(facultyName);
+                dialog.dismiss();
+            }
+        });
     }
 
     private void startNewFacultyRegistration(String facultyName) {
@@ -189,21 +222,32 @@ public class AdminActivity extends AppCompatActivity {
 
         if (facultyDirs != null && facultyDirs.length > 0) {
             String[] facultyNames = Arrays.stream(facultyDirs).map(File::getName).toArray(String[]::new);
-            new AlertDialog.Builder(this)
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(this)
                     .setTitle("Select Faculty to Delete")
-                    .setItems(facultyNames, (dialog, which) -> {
+                    .setItems(facultyNames, (d, which) -> {
                         String nameToDelete = facultyNames[which];
                         deleteRecursive(new File(facultyRoot, nameToDelete));
                         removeFacultyFromEmbeddings(nameToDelete);
                         textStatus.setText("Deleted faculty: " + nameToDelete);
                         Toast.makeText(this, "Faculty removed and embeddings updated!", Toast.LENGTH_SHORT).show();
                     })
-                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
-                    .show();
+                    .setNegativeButton("Cancel", (d, which) -> d.dismiss());
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                    .setTextColor(ContextCompat.getColor(this, R.color.dark_red));
+            TextView title = dialog.findViewById(android.R.id.title);
+            if (title != null) {
+                title.setTypeface(ResourcesCompat.getFont(this, R.font.roundelay_extrabold));
+            }
+
         } else {
             textStatus.setText("No faculty found to delete.");
         }
     }
+
 
     private void deleteRecursive(File fileOrDirectory) {
         if (fileOrDirectory.isDirectory())
@@ -354,23 +398,50 @@ public class AdminActivity extends AppCompatActivity {
     // -------------------- Google Drive --------------------
     private void promptFacultyNameForDriveImport() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Import Faculty Photos from Drive");
 
-        final EditText input = new EditText(this);
-        input.setHint("Enter Faculty Name");
-        builder.setView(input);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.popup_input_window, null);
 
-        builder.setPositiveButton("Next", (dialog, which) -> {
-            currentFacultyName = input.getText().toString().trim();
-            if (currentFacultyName.isEmpty()) {
-                Toast.makeText(this, "Faculty name cannot be empty.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            requestDriveSignIn();
-        });
+        TextView titleView = dialogView.findViewById(R.id.dialogTitle);
+        EditText input = dialogView.findViewById(R.id.inputFacultyName);
+        TextView errorText = dialogView.findViewById(R.id.errorText);
 
+        titleView.setText("Import Faculty Photos from Drive");
+        input.setHint("Enter faculty name...");
+        input.setHintTextColor(ContextCompat.getColor(this, R.color.light_gray));
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+
+        builder.setView(dialogView);
+
+        builder.setPositiveButton("Next", null); // No default listener
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
-        builder.show();
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setTextColor(ContextCompat.getColor(this, R.color.dark_blue));
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                .setTextColor(ContextCompat.getColor(this, R.color.dark_red));
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String facultyName = input.getText().toString().trim();
+
+            if (facultyName.length() < 7) {
+                errorText.setText("Characters must have more than 7 letters");
+                errorText.setVisibility(View.VISIBLE);
+                input.setText("");
+            } else if (!facultyName.matches("[a-zA-Z. ]+")) {
+                errorText.setText("Only letters are allowed");
+                errorText.setVisibility(View.VISIBLE);
+                input.setText("");
+            } else {
+                errorText.setVisibility(View.GONE);
+                currentFacultyName = facultyName;
+                requestDriveSignIn(); // Only runs if validation passes
+                dialog.dismiss();
+            }
+        });
     }
 
     private void openDrivePicker() {
