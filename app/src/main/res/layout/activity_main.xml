@@ -65,7 +65,7 @@
             android:paddingBottom="3dp"
             android:text="@string/default_status"
             android:textAlignment="center"
-            android:textColor="@android:color/white"
+            android:textColor="@android:color/black"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -76,7 +76,7 @@
             android:fontFamily="@font/aoboshi_one"
             android:paddingBottom="7dp"
             android:text="Scanning for stability..."
-            android:textColor="#9E9E9E"
+            android:textColor="@android:color/black"
             android:textSize="15sp" />
     </LinearLayout>
 
@@ -98,7 +98,7 @@
             android:layout_height="60dp"
             android:layout_centerHorizontal="true"
             android:scaleType="centerCrop"
-            app:srcCompat="@drawable/headerlogo" />
+            app:srcCompat="@drawable/header_shaded2" />
 
         <!-- Professor picture -->
         <ImageView
@@ -120,10 +120,25 @@
             android:layout_centerHorizontal="true"
             android:layout_marginTop="12dp"
             android:fontFamily="@font/aoboshi_one"
-            android:text="Professor _____ is in class"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
+            android:text="Engr. <name>"
+            android:textColor="@android:color/black"
+            android:textSize="15sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/professor_status_text"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:text="Status: In Class"
+            android:textColor="@android:color/black"
+            android:fontFamily="@font/aoboshi_one"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
     </RelativeLayout>
 
 
