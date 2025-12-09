@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_background"
+    android:padding="24dp">
+
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/whole_logo"
+        android:alpha="0.2"
+        android:contentDescription="Logo Watermark"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scrollbars="vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/aboutUsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="About Us"
+                android:textSize="20sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:paddingBottom="16dp"/>
+
+            <TextView
+                android:id="@+id/theCreatorsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/generalsans_bold"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"
+                android:text="The Creators"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp" />
+
+            <!-- Leaders -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👑 Leaders"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Alliyah Rein De Leus\nTrisha Mikaela Medrano\nAllen Pesigan\nJoriel Laurence Singh"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/generalsans_regular"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"/>
+
+            <!-- Software Development Team -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💻 Software Development Team"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Christine Anne Arquez\nKristine Frane\nTrisha Mikaela Medrano\nBrylla Jane Montero\nAllen Pesigan"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/generalsans_regular"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"/>
+
+            <!-- ESP Bluetooth Connection -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔗 ESP Bluetooth Connection (sub‑team)"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:gravity="center_horizontal"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Aidan Jaycob De Claro\nKanisha Christel Gallos\nPrincess Mica Recio\nFrancis Roldan\nJenny Sambat"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/generalsans_regular"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"/>
+
+            <!-- Hardware Development Team -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔧 Hardware Development Team"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Dainiel Briones\nClarence Adrian Caraig\nDave Mark De Castro\nEmmanuel Robert Diamante\nDann Jupiter Dimalibot\nJoriel Laurence Singh"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/generalsans_regular"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"/>
+
+            <!-- UI/UX Design Team -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🎨 UI/UX Design Team"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Kathlene Kaye Alonzo\nJorgette Aira Amaro\nAlliyah Rein De Leus\nKnudcen Gradly De Villa\nRainiel Laren Dimapasoc"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/generalsans_regular"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"/>
+
+            <!-- Data Training Team -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📊 Data Training Team"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Niel Andrei Africa\nClarence Jude Añonuevo\nHansine Lauraine Bautista\nGeoffrey Emmanuel Boco\nKyle Dranmay Dalangin\nAlross Guevarra\nRichmond Lingal\nIdris Laurence Padilla\nNeal Justine Puri\nChristian Quilao\nKariz Recio\nJhon Michael Untalan"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/generalsans_regular"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"/>
+
+            <!-- Data Collection Team -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📋 Data Collection Team"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:fontFamily="@font/generalsans_bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ivan Kirby Castillo\nJohn carlo Reyes"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/generalsans_regular"
+                android:gravity="center_horizontal"
+                android:lineSpacingExtra="4dp"
+                android:paddingBottom="12dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
