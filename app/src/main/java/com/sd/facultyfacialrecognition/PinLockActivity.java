@@ -38,7 +38,7 @@ public class PinLockActivity extends AppCompatActivity {
         buttonSubmit.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_dark));
 
         if (backButton != null) {
-            backButton.setOnClickListener(v -> finish());
+            backButton.setOnClickListener(v -> navigateToHome());
         }
 
         buttonSubmit.setOnClickListener(v -> handlePinSubmit());
@@ -65,6 +65,11 @@ public class PinLockActivity extends AppCompatActivity {
         }
     }
 
+    private void navigateToHome() {
+        Intent intent = new Intent(PinLockActivity.this, HomeActivity.class);
+        startActivity(intent);
+        finish();
+    }
     private void logAccessToFirestore() {
         try {
             if (firestore == null) {
