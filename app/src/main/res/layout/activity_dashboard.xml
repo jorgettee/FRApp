@@ -41,21 +41,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:fontFamily="@font/aoboshi_one"
+            android:fontFamily="@font/generalsans_bold"
             android:gravity="center"
-            android:text="Prof."
+            android:text="Engr."
             android:textColor="#FFFFFF"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:textSize="28sp"/>
 
         <TextView
             android:id="@+id/text_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Status: In Class"
+            android:fontFamily="@font/generalsans_semibold"
             android:textSize="20sp"
             android:textColor="#FFFFFF"
-            android:textStyle="bold"
             android:layout_marginTop="20dp"
             android:gravity="center" />
 
@@ -67,10 +66,10 @@
             android:textSize="20sp"
             android:layout_marginTop="50dp"
             android:padding="16dp"
-            android:fontFamily="@font/aoboshi_one"
-            app:strokeColor="@color/black"
+            android:fontFamily="@font/generalsans_regular"
+            app:strokeColor="@color/dark_blue"
             app:strokeWidth="1dp"
-            app:backgroundTint="#0e63a2"
+            app:backgroundTint="#1F5F92"
             />
 
     </LinearLayout>

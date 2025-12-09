@@ -47,7 +47,7 @@
             android:layout_centerInParent="true"
             android:text="Admin Page"
             android:textColor="@android:color/black"
-            android:fontFamily="@font/roundelay_extrabold"
+            android:fontFamily="@font/generalsans_bold"
             android:textSize="24sp"
             android:textStyle="bold" />
 
@@ -96,15 +96,10 @@
                 android:scaleType="centerCrop"
                 app:srcCompat="@drawable/headerlogo" />
 
-            <ImageView
-                android:id="@+id/imageView"
-                android:layout_width="match_parent"
-                android:layout_height="100dp"
-                app:srcCompat="@drawable/app_logo" />
 
             <Space
                 android:layout_width="match_parent"
-                android:layout_height="13dp" />
+                android:layout_height="55dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonAddFaculty"
@@ -116,7 +111,7 @@
                 app:backgroundTint="#1E88E5"
                 app:cornerRadius="20dp"
                 app:strokeColor="@color/blue"
-                android:fontFamily="@font/roundelay_extrabold"
+                android:fontFamily="@font/generalsans_medium"
                 app:strokeWidth="2dp" />
 
             <!-- Delete Faculty button -->
@@ -131,7 +126,7 @@
                 app:backgroundTint="#E53935"
                 app:cornerRadius="20dp"
                 app:strokeColor="@color/dark_red"
-                android:fontFamily="@font/roundelay_extrabold"
+                android:fontFamily="@font/generalsans_medium"
                 app:strokeWidth="2dp" />
 
             <!-- Import Drive button -->
@@ -146,7 +141,7 @@
                 app:backgroundTint="#43A047"
                 app:cornerRadius="20dp"
                 app:strokeColor="@color/dark_green"
-                android:fontFamily="@font/roundelay_extrabold"
+                android:fontFamily="@font/generalsans_medium"
                 app:strokeWidth="2dp" />
 
             <!-- Generate Embeddings button -->
@@ -161,7 +156,7 @@
                 app:backgroundTint="#fb9b1e"
                 app:cornerRadius="20dp"
                 app:strokeColor="@color/dark_orange"
-                android:fontFamily="@font/roundelay_extrabold"
+                android:fontFamily="@font/generalsans_medium"
                 app:strokeWidth="2dp" />
         </LinearLayout>
     </LinearLayout>
@@ -176,7 +171,7 @@
         android:paddingStart="20dp"
         android:text="Status messages will appear here"
         android:textColor="@color/black"
-        android:fontFamily="@font/roundelay_extrabold"
+        android:fontFamily="@font/generalsans_regular"
         android:textSize="18sp"
         android:textStyle=""/>
 

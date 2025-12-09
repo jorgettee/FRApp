@@ -5,25 +5,58 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/background_azure"
+    android:background="@color/light_blue"
     tools:context=".MainActivity">
 
-    <ImageView
-        android:layout_width="490dp"
-        android:layout_height="588dp"
-        android:alpha="0.1"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.5"
-        app:srcCompat="@drawable/whole_logo" />
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="-10dp">
+
+        <ImageView
+            android:layout_width="1330dp"
+            android:layout_height="match_parent"
+            android:alpha="0.15"
+            android:scaleType="centerCrop"
+
+            android:src="@drawable/bsu_background" />
+    </FrameLayout> />
+
+    <RelativeLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:paddingVertical="4dp">
+
+        <ImageView
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="Back"
+            android:padding="16dp"
+            android:src="@drawable/baseline_arrow_back_24" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="Facial Recognition"
+            android:textColor="@android:color/black"
+            android:fontFamily="@font/generalsans_bold"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+    </RelativeLayout>
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/previewCard"
         android:layout_width="589dp"
         android:layout_height="419dp"
         android:layout_marginStart="24dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="65dp"
         android:clipChildren="true"
         android:clipToPadding="true"
         app:cardCornerRadius="16dp"
@@ -41,8 +74,8 @@
 
         <com.sd.facultyfacialrecognition.FaceOverlayView
             android:id="@+id/faceOverlayView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_width="356dp"
+            android:layout_height="189dp" />
     </com.google.android.material.card.MaterialCardView>
 
     <!-- STATUS PANEL -->
@@ -61,19 +94,18 @@
             android:id="@+id/text_status_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/aoboshi_one"
+            android:fontFamily="@font/generalsans_bold"
             android:paddingBottom="3dp"
             android:text="@string/default_status"
             android:textAlignment="center"
             android:textColor="@android:color/black"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textSize="18sp"/>
 
         <TextView
             android:id="@+id/text_countdown_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/aoboshi_one"
+            android:fontFamily="@font/generalsans_medium"
             android:paddingBottom="7dp"
             android:text="Scanning for stability..."
             android:textColor="@android:color/black"
@@ -119,11 +151,10 @@
             android:layout_below="@id/professor_image"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="12dp"
-            android:fontFamily="@font/aoboshi_one"
-            android:text="Engr. <name>"
+            android:fontFamily="@font/generalsans_bold"
+            android:text="Engr. &lt;name&gt;"
             android:textColor="@android:color/black"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:textSize="15sp"/>
 
         <TextView
             android:id="@+id/text_status"
@@ -135,7 +166,7 @@
             android:gravity="center"
             android:text="Status: In Class"
             android:textColor="@android:color/black"
-            android:fontFamily="@font/aoboshi_one"
+            android:fontFamily="@font/generalsans_medium"
             android:textSize="18sp"
             android:textStyle="bold" />
 
