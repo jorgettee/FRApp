@@ -22,6 +22,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
@@ -63,7 +64,7 @@ import android.os.Looper;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class AdminActivity extends BaseDrawerActivity {
+public class AdminActivity extends AppCompatActivity {
 
     private ProgressDialog progressDialog;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -75,7 +76,6 @@ public class AdminActivity extends BaseDrawerActivity {
     private Button buttonAddFaculty, buttonDeleteFaculty, buttonImportDrive, buttonGenerateEmbeddings;
     private TextView textStatus;
     private PreviewView previewView;
-    private ImageView backButton;
 
     private String currentFacultyName;
     private File currentFacultyDir;
@@ -92,7 +92,7 @@ public class AdminActivity extends BaseDrawerActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentViewWithDrawer(R.layout.activity_admin);
+        setContentView(R.layout.activity_admin);
 
         buttonAddFaculty = findViewById(R.id.buttonAddFaculty);
         buttonDeleteFaculty = findViewById(R.id.buttonDeleteFaculty);
@@ -112,8 +112,6 @@ public class AdminActivity extends BaseDrawerActivity {
         }
 
         requestStoragePermissions();
-
-        backButton.setOnClickListener(v -> finish());
         buttonAddFaculty.setOnClickListener(v -> showAddFacultyDialog());
         buttonDeleteFaculty.setOnClickListener(v -> showDeleteFacultyListDialog());
         buttonImportDrive.setOnClickListener(v -> promptFacultyNameForDriveImport());
