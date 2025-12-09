@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageAnalysis;
@@ -62,7 +63,7 @@ import com.google.gson.reflect.TypeToken;
 
 
 
-public class MainActivity extends BaseDrawerActivity {
+public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
     private PreviewView previewView;
@@ -133,7 +134,7 @@ public class MainActivity extends BaseDrawerActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentViewWithDrawer(R.layout.activity_main);
+        setContentView(R.layout.activity_main);
 
         previewView = findViewById(R.id.previewView);
         overlayView = findViewById(R.id.faceOverlayView);
