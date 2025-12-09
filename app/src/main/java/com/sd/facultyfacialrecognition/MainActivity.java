@@ -522,7 +522,7 @@ public class MainActivity extends AppCompatActivity {
         sendLockCommand();
 
         Intent intent = new Intent(MainActivity.this, ThankYouActivity.class);
-        intent.putExtra("message", "Class ended and door is locked, thank you!");
+        intent.putExtra("message", "Class has ended and door is locked.");
         startActivity(intent);
         finish();
     }

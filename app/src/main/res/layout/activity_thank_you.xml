@@ -39,20 +39,21 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+
     <TextView
         android:id="@+id/text_goodbye"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/generalsans_bold"
         android:text="Class has ended."
+        android:textAlignment="center"
         android:textColor="#FFFFFF"
         android:textSize="30sp"
-        android:textAlignment="center"
-        android:fontFamily="@font/generalsans_bold"
-        app:layout_constraintTop_toBottomOf="@+id/lock_icon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
+        app:layout_constraintTop_toBottomOf="@+id/lock_icon" />
 
     <TextView
         android:id="@+id/text_ty"
