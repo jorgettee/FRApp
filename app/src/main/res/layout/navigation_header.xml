@@ -25,23 +25,23 @@
             android:layout_height="wrap_content"
             android:fontFamily="@font/generalsans_bold"
             android:text="Faculty"
-            android:textSize="26sp"
+            android:textSize="22sp"
             android:textStyle="bold"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/generalsans_bold"
-            android:text="Room"
-            android:textSize="26sp"
+            android:text="Facial"
+            android:textSize="22sp"
             android:textStyle="bold"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/generalsans_bold"
-            android:text="Monitoring"
-            android:textSize="26sp"
+            android:text="Recognition"
+            android:textSize="22sp"
             android:textStyle="bold"/>
 
     </LinearLayout>

@@ -100,7 +100,6 @@ public class AdminActivity extends BaseDrawerActivity {
         buttonGenerateEmbeddings = findViewById(R.id.buttonGenerateEmbeddings);
         textStatus = findViewById(R.id.textStatus);
         previewView = findViewById(R.id.previewView);
-        backButton = findViewById(R.id.backButton);
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         faceAligner = new FaceAligner(this);

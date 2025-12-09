@@ -4,28 +4,38 @@
     <group android:checkableBehavior="single">
         <item
             android:id="@+id/nav_home"
-            android:title="Home Page" />
+            android:fontFamily="@font/generalsans_bold"
+            android:title="Home Page"
+            android:icon="@drawable/outline_add_home_24"
+            android:iconTint="@color/dark_blue" />
+
     </group>
 
     <group android:id="@+id/group2">
         <item
             android:id="@+id/nav_schedule"
             android:icon="@android:drawable/ic_menu_my_calendar"
-            android:title="Admin Page" />
+            android:fontFamily="@font/generalsans_bold"
+            android:title="Admin Page"
+            android:iconTint="@color/dark_blue"/>
     </group>
 
     <group android:id="@+id/group3">
         <item
             android:id="@+id/nav_about"
             android:icon="@android:drawable/ic_menu_info_details"
-            android:title="About Us" />
+            android:fontFamily="@font/generalsans_bold"
+            android:title="About Us"
+            android:iconTint="@color/dark_yellow"/>
     </group>
 
     <group android:id="@+id/group4">
         <item
             android:id="@+id/nav_exit"
             android:icon="@android:drawable/ic_menu_close_clear_cancel"
-            android:title="Exit" />
+            android:fontFamily="@font/generalsans_bold"
+            android:title="Exit"
+            android:iconTint="@color/dark_red"/>
     </group>
 
 </menu>

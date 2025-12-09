@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
+import android.widget.ImageButton;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.Timestamp;
@@ -18,6 +18,7 @@ public class PinLockActivity extends AppCompatActivity {
 
     private EditText editTextPin;
     private Button buttonSubmit;
+    private ImageButton backButton;
 
     private static final String FIXED_PIN = "1234";
     private FirebaseFirestore firestore;
@@ -29,12 +30,16 @@ public class PinLockActivity extends AppCompatActivity {
 
         editTextPin = findViewById(R.id.editTextPin);
         buttonSubmit = findViewById(R.id.buttonSubmit);
-
+        backButton = findViewById(R.id.btnBack);
         firestore = FirebaseFirestore.getInstance();
 
         buttonSubmit.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_dark));
 
         buttonSubmit.setOnClickListener(v -> handlePinSubmit());
+        backButton.setOnClickListener(v -> {
+            // behave like a back action within the app
+            finish();
+        });
     }
 
     private void handlePinSubmit() {
