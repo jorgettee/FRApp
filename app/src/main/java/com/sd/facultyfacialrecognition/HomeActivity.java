@@ -8,11 +8,10 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-public class HomeActivity extends AppCompatActivity {
+public class HomeActivity extends BaseDrawerActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
     private Button buttonFacialRecognition, buttonAdminPanel;
@@ -20,7 +19,7 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_home);
+        setContentViewWithDrawer(R.layout.activity_home);
 
         buttonFacialRecognition = findViewById(R.id.buttonFacialRecognition);
         buttonAdminPanel = findViewById(R.id.buttonAdminPanel);
