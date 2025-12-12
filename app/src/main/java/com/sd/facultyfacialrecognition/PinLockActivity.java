@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,6 +19,7 @@ public class PinLockActivity extends AppCompatActivity {
 
     private EditText editTextPin;
     private Button buttonSubmit;
+    private ImageView backButton;
 
     private static final String FIXED_PIN = "1234";
     private FirebaseFirestore firestore;
@@ -29,10 +31,15 @@ public class PinLockActivity extends AppCompatActivity {
 
         editTextPin = findViewById(R.id.editTextPin);
         buttonSubmit = findViewById(R.id.buttonSubmit);
+        backButton = findViewById(R.id.backButton);
 
         firestore = FirebaseFirestore.getInstance();
 
         buttonSubmit.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_dark));
+
+        if (backButton != null) {
+            backButton.setOnClickListener(v -> navigateToHome());
+        }
 
         buttonSubmit.setOnClickListener(v -> handlePinSubmit());
     }
@@ -58,16 +65,29 @@ public class PinLockActivity extends AppCompatActivity {
         }
     }
 
+    private void navigateToHome() {
+        Intent intent = new Intent(PinLockActivity.this, HomeActivity.class);
+        startActivity(intent);
+        finish();
+    }
     private void logAccessToFirestore() {
-        Map<String, Object> logEntry = new HashMap<>();
-        logEntry.put("pin", FIXED_PIN);
-        logEntry.put("timestamp", Timestamp.now());
+        try {
+            if (firestore == null) {
+                firestore = FirebaseFirestore.getInstance();
+            }
 
-        firestore.collection("access_to_database_logs")
-                .add(logEntry)
-                .addOnSuccessListener(documentReference ->
-                        Toast.makeText(this, "Access logged to Firestore.", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to log access: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            Map<String, Object> logEntry = new HashMap<>();
+            logEntry.put("pin", FIXED_PIN);
+            logEntry.put("timestamp", Timestamp.now());
+
+            firestore.collection("access_to_database_logs")
+                    .add(logEntry)
+                    .addOnSuccessListener(documentReference ->
+                            Toast.makeText(this, "Access logged to Firestore.", Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(e ->
+                            Toast.makeText(this, "Failed to log access: " + e.getMessage(), Toast.LENGTH_LONG).show());
+        } catch (Exception e) {
+            Toast.makeText(this, "Skipping Firestore logging: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 }

@@ -4,9 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class DashboardActivity extends AppCompatActivity {
+public class DashboardActivity extends BaseDrawerActivity {
 
     private TextView welcomeText;
     private TextView statusText;
@@ -16,7 +15,7 @@ public class DashboardActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_dashboard);
+        setContentViewWithDrawer(R.layout.activity_dashboard);
 
         profName = getIntent().getStringExtra("profName");
 
